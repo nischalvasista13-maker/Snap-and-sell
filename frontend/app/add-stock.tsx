@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Ima
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 export default function AddStock() {
   const router = useRouter();
@@ -41,14 +42,25 @@ export default function AddStock() {
       setCapturing(true);
       try {
         const photo = await cameraRef.takePictureAsync({
-          quality: 0.7,
-          base64: true,
+          quality: 0.5,
+          base64: false, // Don't get base64 initially
         });
         
-        // Navigate to item details with the captured image
+        // Compress and resize image
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
+          photo.uri,
+          [{ resize: { width: 800 } }], // Resize to max width 800px
+          { 
+            compress: 0.6, 
+            format: ImageManipulator.SaveFormat.JPEG,
+            base64: true 
+          }
+        );
+        
+        // Navigate to item details with compressed image
         router.push({
           pathname: '/item-details',
-          params: { imageData: `data:image/jpg;base64,${photo.base64}` }
+          params: { imageData: `data:image/jpeg;base64,${manipulatedImage.base64}` }
         });
       } catch (error) {
         console.error('Error taking picture:', error);
