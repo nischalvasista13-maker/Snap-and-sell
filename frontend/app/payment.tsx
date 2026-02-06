@@ -87,6 +87,7 @@ export default function Payment() {
     { id: 'cash', name: 'Cash', icon: 'cash' },
     { id: 'card', name: 'Card', icon: 'card' },
     { id: 'upi', name: 'UPI', icon: 'phone-portrait' },
+    { id: 'credit', name: 'Credit', icon: 'time' },
     { id: 'other', name: 'Other', icon: 'ellipsis-horizontal' },
   ];
 
