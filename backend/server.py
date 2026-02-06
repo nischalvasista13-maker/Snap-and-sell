@@ -144,6 +144,102 @@ class SaleResponse(BaseModel):
     class Config:
         populate_by_name = True
 
+# ===== AUTH HELPER FUNCTIONS =====
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def send_email(subject: str, body: str, to_email: str):
+    try:
+        message = MIMEMultipart()
+        message["From"] = "pos-app@noreply.com"
+        message["To"] = to_email
+        message["Subject"] = subject
+        message.attach(MIMEText(body, "plain"))
+        
+        # Note: This is a placeholder. In production, configure actual SMTP settings
+        logger.info(f"Email notification: {subject} to {to_email}")
+        logger.info(f"Body: {body}")
+        # await aiosmtplib.send(message, hostname="smtp.gmail.com", port=587)
+    except Exception as e:
+        logger.error(f"Failed to send email: {e}")
+
+# ===== AUTH ENDPOINTS =====
+
+@api_router.post("/auth/signup", response_model=Token)
+async def signup(user: UserCreate):
+    # Check if username exists
+    existing_user = await db.users.find_one({"username": user.username})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    # Create new user
+    hashed_password = hash_password(user.password)
+    user_doc = {
+        "username": user.username,
+        "password": hashed_password,
+        "createdAt": datetime.utcnow()
+    }
+    
+    result = await db.users.insert_one(user_doc)
+    user_id = str(result.inserted_id)
+    
+    # Create access token
+    access_token = create_access_token(data={"sub": user.username, "user_id": user_id})
+    
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@api_router.post("/auth/signin", response_model=Token)
+async def signin(user: UserLogin):
+    # Find user
+    db_user = await db.users.find_one({"username": user.username})
+    if not db_user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Verify password
+    if not verify_password(user.password, db_user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Create access token
+    user_id = str(db_user["_id"])
+    access_token = create_access_token(data={"sub": user.username, "user_id": user_id})
+    
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(request: ForgotPassword):
+    # Check if user exists
+    user = await db.users.find_one({"username": request.username})
+    if not user:
+        # Don't reveal if user exists or not
+        return {"message": "Password reset request sent to admin."}
+    
+    # Send email to admin
+    subject = f"Password Reset Request - POS App"
+    body = f"""
+Password reset request received for user: {request.username}
+
+User ID: {str(user['_id'])}
+Username: {request.username}
+Request Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
+
+Please assist the user with password reset.
+    """
+    
+    await send_email(subject, body, ADMIN_EMAIL)
+    
+    return {"message": "Password reset request sent to admin."}
+
 # ===== SETTINGS ENDPOINTS =====
 
 @api_router.post("/settings/setup")
