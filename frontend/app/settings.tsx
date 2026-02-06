@@ -187,6 +187,20 @@ export default function Settings() {
             </>
           )}
         </TouchableOpacity>
+
+        {/* Sign Out Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          
+          <TouchableOpacity 
+            style={styles.signOutButton}
+            onPress={handleSignOut}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
+            <Text style={styles.signOutButtonText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
