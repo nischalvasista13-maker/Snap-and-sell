@@ -258,8 +258,8 @@ export default function ItemMatch() {
           />
           <Text style={matchedProduct ? styles.successText : styles.warningText}>
             {matchedProduct 
-              ? "Suggested product based on image" 
-              : "Product not found. Select manually from list."}
+              ? "Suggested (based on similarity)" 
+              : "Product not found. Select manually."}
           </Text>
         </View>
       )}
