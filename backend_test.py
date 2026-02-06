@@ -92,7 +92,11 @@ class POSBackendTester:
             print("\n💰 TESTING SALES API")
             self.test_sales_api()
             
-            # 4. Test Integration Flow
+            # 4. Test Payment Summary API
+            print("\n📊 TESTING PAYMENT SUMMARY API")
+            self.test_payment_summary_api()
+            
+            # 5. Test Integration Flow
             print("\n🔄 TESTING INTEGRATION FLOW")
             self.test_integration_flow()
             
