@@ -341,6 +341,156 @@ class POSBackendTester:
         except Exception as e:
             self.log_test("GET /sales", False, f"Error: {str(e)}")
     
+    def test_payment_summary_api(self):
+        """Test the Payment Summary API endpoint comprehensively"""
+        
+        print("  Testing Payment Summary API...")
+        
+        from datetime import datetime, timedelta
+        
+        # Test dates
+        today = datetime.now().strftime('%Y-%m-%d')
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+        future_date = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        # Create test sales with different payment methods if we have enough products
+        if len(self.created_products) >= 3:
+            print("    Creating test sales with various payment methods...")
+            
+            test_sales_data = [
+                {
+                    "items": [{
+                        "productId": self.created_products[0]["_id"],
+                        "productName": self.created_products[0]["name"],
+                        "quantity": 2,
+                        "price": self.created_products[0]["price"],
+                        "image": self.created_products[0]["images"][0] if self.created_products[0]["images"] else ""
+                    }],
+                    "total": self.created_products[0]["price"] * 2,
+                    "paymentMethod": "Cash"
+                },
+                {
+                    "items": [{
+                        "productId": self.created_products[1]["_id"],
+                        "productName": self.created_products[1]["name"],
+                        "quantity": 1,
+                        "price": self.created_products[1]["price"],
+                        "image": self.created_products[1]["images"][0] if self.created_products[1]["images"] else ""
+                    }],
+                    "total": self.created_products[1]["price"],
+                    "paymentMethod": "UPI"
+                },
+                {
+                    "items": [{
+                        "productId": self.created_products[2]["_id"],
+                        "productName": self.created_products[2]["name"],
+                        "quantity": 1,
+                        "price": self.created_products[2]["price"],
+                        "image": self.created_products[2]["images"][0] if self.created_products[2]["images"] else ""
+                    }],
+                    "total": self.created_products[2]["price"],
+                    "paymentMethod": "Card"
+                },
+                {
+                    "items": [{
+                        "productId": self.created_products[0]["_id"],
+                        "productName": self.created_products[0]["name"],
+                        "quantity": 1,
+                        "price": self.created_products[0]["price"],
+                        "image": self.created_products[0]["images"][0] if self.created_products[0]["images"] else ""
+                    }],
+                    "total": self.created_products[0]["price"],
+                    "paymentMethod": "Credit"
+                }
+            ]
+            
+            # Create the test sales
+            created_test_sales = []
+            for sale_data in test_sales_data:
+                try:
+                    response = self.session.post(f"{BACKEND_URL}/sales", json=sale_data)
+                    if response.status_code == 200:
+                        created_test_sales.append(response.json())
+                except Exception as e:
+                    print(f"    Failed to create test sale: {str(e)}")
+        
+        # Test Case 1: Today's date range summary
+        try:
+            response = self.session.get(f"{BACKEND_URL}/sales/summary", 
+                                      params={"start_date": today, "end_date": today})
+            
+            if response.status_code == 200:
+                summary = response.json()
+                
+                # Verify response structure
+                required_fields = ["totalSales", "cashTotal", "upiTotal", "cardTotal", 
+                                 "creditTotal", "otherTotal", "totalTransactions", "breakdown"]
+                missing_fields = [field for field in required_fields if field not in summary]
+                
+                if not missing_fields:
+                    # Verify total calculation
+                    expected_total = (summary.get('cashTotal', 0) + summary.get('upiTotal', 0) + 
+                                    summary.get('cardTotal', 0) + summary.get('creditTotal', 0) + 
+                                    summary.get('otherTotal', 0))
+                    
+                    total_correct = abs(summary['totalSales'] - expected_total) < 0.01
+                    
+                    self.log_test("GET /sales/summary (today)", total_correct, 
+                                f"Total: ${summary['totalSales']}, Transactions: {summary['totalTransactions']}")
+                else:
+                    self.log_test("GET /sales/summary (today)", False, 
+                                f"Missing fields: {missing_fields}")
+            else:
+                self.log_test("GET /sales/summary (today)", False, 
+                            f"Status: {response.status_code}")
+        except Exception as e:
+            self.log_test("GET /sales/summary (today)", False, f"Error: {str(e)}")
+        
+        # Test Case 2: Week range summary
+        try:
+            response = self.session.get(f"{BACKEND_URL}/sales/summary",
+                                      params={"start_date": week_ago, "end_date": today})
+            
+            if response.status_code == 200:
+                summary = response.json()
+                week_range_ok = isinstance(summary.get('totalSales'), (int, float))
+                self.log_test("GET /sales/summary (week range)", week_range_ok,
+                            f"Week total: ${summary.get('totalSales', 0)}")
+            else:
+                self.log_test("GET /sales/summary (week range)", False,
+                            f"Status: {response.status_code}")
+        except Exception as e:
+            self.log_test("GET /sales/summary (week range)", False, f"Error: {str(e)}")
+        
+        # Test Case 3: Empty date range (future date)
+        try:
+            response = self.session.get(f"{BACKEND_URL}/sales/summary",
+                                      params={"start_date": future_date, "end_date": future_date})
+            
+            if response.status_code == 200:
+                summary = response.json()
+                empty_correct = (summary.get('totalSales', -1) == 0 and 
+                               summary.get('totalTransactions', -1) == 0)
+                self.log_test("GET /sales/summary (empty range)", empty_correct,
+                            f"Empty range returns zeros: {summary.get('totalSales', 0)}")
+            else:
+                self.log_test("GET /sales/summary (empty range)", False,
+                            f"Status: {response.status_code}")
+        except Exception as e:
+            self.log_test("GET /sales/summary (empty range)", False, f"Error: {str(e)}")
+        
+        # Test Case 4: Missing parameters
+        try:
+            response = self.session.get(f"{BACKEND_URL}/sales/summary")
+            
+            # Should return validation error (422 or 400)
+            missing_params_handled = response.status_code in [400, 422]
+            self.log_test("GET /sales/summary (missing params)", missing_params_handled,
+                        f"Validation error status: {response.status_code}")
+        except Exception as e:
+            self.log_test("GET /sales/summary (missing params)", False, f"Error: {str(e)}")
+
     def test_integration_flow(self):
         """Test the complete integration flow as specified"""
         
