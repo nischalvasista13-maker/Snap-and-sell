@@ -87,9 +87,10 @@ class SettingsResponse(BaseModel):
 class Product(BaseModel):
     name: str
     price: float
-    stock: int
+    stock: int  # Total stock (sum of all sizes)
     category: Optional[str] = ""
-    size: Optional[str] = ""
+    size: Optional[str] = ""  # Kept for backward compatibility
+    sizeQuantities: Optional[dict] = {}  # {"S": 10, "M": 15, "L": 20, "XL": 5}
     color: Optional[str] = ""
     images: List[str] = []  # Base64 images
     createdAt: Optional[datetime] = None
