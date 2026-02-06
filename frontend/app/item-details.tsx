@@ -56,23 +56,42 @@ export default function ItemDetails() {
 
     setSaving(true);
     try {
-      await axios.post(`${BACKEND_URL}/api/products`, {
-        name: name.trim(),
-        price: Number(price),
-        stock: totalStock,
-        category: category.trim(),
-        size: '', // Deprecated, kept for compatibility
-        sizeQuantities: sizeQuantities,
-        color: color.trim(),
-        images: [imageData]
-      });
+      // Set a timeout for the request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      await axios.post(
+        `${BACKEND_URL}/api/products`, 
+        {
+          name: name.trim(),
+          price: Number(price),
+          stock: totalStock,
+          category: category.trim(),
+          size: '', // Deprecated, kept for compatibility
+          sizeQuantities: sizeQuantities,
+          color: color.trim(),
+          images: [imageData]
+        },
+        {
+          signal: controller.signal,
+          timeout: 30000
+        }
+      );
+
+      clearTimeout(timeoutId);
 
       Alert.alert('Success', 'Product added successfully', [
         { text: 'OK', onPress: () => router.back() }
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving product:', error);
-      Alert.alert('Error', 'Failed to save product. Please try again.');
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        Alert.alert('Timeout', 'Request took too long. Please try again with a smaller image or check your connection.');
+      } else if (error.response?.status === 413) {
+        Alert.alert('Error', 'Image is too large. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to save product. Please try again.');
+      }
     } finally {
       setSaving(false);
     }
