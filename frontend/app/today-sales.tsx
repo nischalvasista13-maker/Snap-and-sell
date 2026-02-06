@@ -125,11 +125,17 @@ export default function TodaySales() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadSales();
+    loadSalesAndSummary();
   };
 
-  const calculateTotalSales = () => {
-    return sales.reduce((sum, sale) => sum + sale.total, 0);
+  // Check if there are no sales in the period
+  const hasNoSales = () => {
+    if (!paymentSummary) return sales.length === 0;
+    return paymentSummary.totalSales === 0 && 
+           paymentSummary.cashTotal === 0 && 
+           paymentSummary.upiTotal === 0 && 
+           paymentSummary.cardTotal === 0 && 
+           paymentSummary.creditTotal === 0;
   };
 
   const formatTime = (timestamp: string) => {
