@@ -186,7 +186,7 @@ export default function ItemMatch() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {filteredProducts.length === 0 ? (
+        {organizedProducts().length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="cube-outline" size={80} color="#CCC" />
             <Text style={styles.emptyText}>No products found</Text>
@@ -194,26 +194,40 @@ export default function ItemMatch() {
           </View>
         ) : (
           <View style={styles.grid}>
-            {filteredProducts.map((product) => (
-              <TouchableOpacity
-                key={product._id}
-                style={styles.productCard}
-                onPress={() => handleSelectProduct(product)}
-                activeOpacity={0.8}
-              >
-                <Image 
-                  source={{ uri: product.images[0] }} 
-                  style={styles.productImage}
-                />
-                <View style={styles.productInfo}>
-                  <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
-                  <Text style={styles.productPrice}>₹{product.price.toFixed(2)}</Text>
-                  <Text style={[styles.productStock, product.stock <= 5 && styles.lowStock]}>
-                    Stock: {product.stock}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {organizedProducts().map((product) => {
+              const isMatched = matchedProduct && product._id === matchedProduct._id;
+              
+              return (
+                <TouchableOpacity
+                  key={product._id}
+                  style={[
+                    styles.productCard,
+                    isMatched && styles.productCardMatched
+                  ]}
+                  onPress={() => handleSelectProduct(product)}
+                  activeOpacity={0.8}
+                >
+                  {isMatched && (
+                    <View style={styles.suggestedBadge}>
+                      <Ionicons name="star" size={12} color="#FFF" />
+                      <Text style={styles.suggestedText}>Suggested</Text>
+                    </View>
+                  )}
+                  
+                  <Image 
+                    source={{ uri: product.images[0] }} 
+                    style={styles.productImage}
+                  />
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+                    <Text style={styles.productPrice}>₹{product.price.toFixed(2)}</Text>
+                    <Text style={[styles.productStock, product.stock <= 5 && styles.lowStock]}>
+                      Stock: {product.stock}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </ScrollView>
