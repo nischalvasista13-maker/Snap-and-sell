@@ -101,6 +101,19 @@ export default function Index() {
             />
           </View>
 
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>UPI ID (Optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="yourname@upi"
+              value={upiId}
+              onChangeText={setUpiId}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <Text style={styles.helpText}>For UPI payments (can be added later)</Text>
+          </View>
+
           <TouchableOpacity 
             style={styles.setupButton}
             onPress={handleSetup}
