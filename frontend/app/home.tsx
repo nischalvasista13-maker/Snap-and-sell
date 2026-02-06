@@ -59,6 +59,9 @@ export default function Home() {
           <Text style={styles.headerTitle}>{shopName || 'POS System'}</Text>
           <Text style={styles.headerSubtitle}>Home Dashboard</Text>
         </View>
+        <TouchableOpacity onPress={() => router.push('/settings')}>
+          <Ionicons name="settings-outline" size={24} color="#FFF" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
