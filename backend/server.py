@@ -358,12 +358,18 @@ async def create_sale(sale: Sale):
     sale_dict['timestamp'] = datetime.utcnow()
     sale_dict['date'] = datetime.utcnow().strftime('%Y-%m-%d')
     
-    # Update stock for each item
-    for item in sale_dict['items']:
-        await db.products.update_one(
+    # Update stock for all items using bulk_write (optimized)
+    from pymongo import UpdateOne
+    bulk_operations = [
+        UpdateOne(
             {"_id": ObjectId(item['productId'])},
             {"$inc": {"stock": -item['quantity']}}
         )
+        for item in sale_dict['items']
+    ]
+    
+    if bulk_operations:
+        await db.products.bulk_write(bulk_operations)
     
     result = await db.sales.insert_one(sale_dict)
     sale_dict['_id'] = str(result.inserted_id)
@@ -372,12 +378,32 @@ async def create_sale(sale: Sale):
 @api_router.get("/sales/today")
 async def get_today_sales():
     today = datetime.utcnow().strftime('%Y-%m-%d')
-    sales = await db.sales.find({"date": today}).to_list(1000)
+    # Optimized query with projection and reasonable limit
+    sales = await db.sales.find(
+        {"date": today},
+        {
+            'items': 1,
+            'total': 1,
+            'paymentMethod': 1,
+            'timestamp': 1,
+            'date': 1
+        }
+    ).sort("timestamp", -1).limit(200).to_list(200)
     return [object_id_to_str(s) for s in sales]
 
 @api_router.get("/sales")
 async def get_all_sales():
-    sales = await db.sales.find().sort("timestamp", -1).to_list(1000)
+    # Optimized query with projection, sort, and limit
+    sales = await db.sales.find(
+        {},
+        {
+            'items': 1,
+            'total': 1,
+            'paymentMethod': 1,
+            'timestamp': 1,
+            'date': 1
+        }
+    ).sort("timestamp", -1).limit(100).to_list(100)
     return [object_id_to_str(s) for s in sales]
 
 # Include the router in the main app
