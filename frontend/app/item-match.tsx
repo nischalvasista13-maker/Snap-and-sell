@@ -16,14 +16,19 @@ interface Product {
   category?: string;
   size?: string;
   color?: string;
+  createdAt?: string;
 }
 
 export default function ItemMatch() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const capturedImage = params.imageData as string;
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [matchedProduct, setMatchedProduct] = useState<Product | null>(null);
+  const [hasAttemptedMatch, setHasAttemptedMatch] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -32,12 +37,55 @@ export default function ItemMatch() {
   const loadProducts = async () => {
     try {
       const response = await axios.get(`${BACKEND_URL}/api/products`);
-      setProducts(response.data);
+      const allProducts = response.data;
+      setProducts(allProducts);
+      
+      // If we have a captured image, try to match it
+      if (capturedImage) {
+        matchProductByImage(capturedImage, allProducts);
+      }
     } catch (error) {
       console.error('Error loading products:', error);
       Alert.alert('Error', 'Failed to load products');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const matchProductByImage = (capturedImg: string, allProducts: Product[]) => {
+    setHasAttemptedMatch(true);
+    
+    // Strategy 1: Try exact image match
+    const exactMatch = allProducts.find(product => 
+      product.images && product.images.some(img => img === capturedImg)
+    );
+    
+    if (exactMatch) {
+      setMatchedProduct(exactMatch);
+      return;
+    }
+    
+    // Strategy 2: Get recently added products (last 5)
+    const sortedByDate = [...allProducts].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+    
+    const recentProducts = sortedByDate.slice(0, 5);
+    
+    // Strategy 3: Try to match by comparing image data length (similar images might have similar size)
+    const capturedLength = capturedImg.length;
+    const similarProduct = recentProducts.find(product => {
+      if (!product.images || product.images.length === 0) return false;
+      const productImgLength = product.images[0].length;
+      const lengthDiff = Math.abs(capturedLength - productImgLength);
+      const percentageDiff = (lengthDiff / capturedLength) * 100;
+      return percentageDiff < 5; // Less than 5% difference in size
+    });
+    
+    if (similarProduct) {
+      setMatchedProduct(similarProduct);
     }
   };
 
