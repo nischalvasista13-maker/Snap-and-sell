@@ -13,15 +13,27 @@ export default function ItemDetails() {
 
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('');
   const [category, setCategory] = useState('');
-  const [size, setSize] = useState('');
   const [color, setColor] = useState('');
   const [saving, setSaving] = useState(false);
+  
+  // Size-wise quantities
+  const [sizeS, setSizeS] = useState('');
+  const [sizeM, setSizeM] = useState('');
+  const [sizeL, setSizeL] = useState('');
+  const [sizeXL, setSizeXL] = useState('');
+
+  const calculateTotalStock = () => {
+    const s = parseInt(sizeS) || 0;
+    const m = parseInt(sizeM) || 0;
+    const l = parseInt(sizeL) || 0;
+    const xl = parseInt(sizeXL) || 0;
+    return s + m + l + xl;
+  };
 
   const handleSave = async () => {
-    if (!name.trim() || !price || !stock) {
-      Alert.alert('Error', 'Please fill in name, price, and stock quantity');
+    if (!name.trim() || !price) {
+      Alert.alert('Error', 'Please fill in name and price');
       return;
     }
 
@@ -30,19 +42,27 @@ export default function ItemDetails() {
       return;
     }
 
-    if (isNaN(Number(stock)) || Number(stock) < 0) {
-      Alert.alert('Error', 'Please enter a valid stock quantity');
+    const totalStock = calculateTotalStock();
+    if (totalStock === 0) {
+      Alert.alert('Error', 'Please enter quantity for at least one size');
       return;
     }
+
+    const sizeQuantities: {[key: string]: number} = {};
+    if (sizeS && parseInt(sizeS) > 0) sizeQuantities['S'] = parseInt(sizeS);
+    if (sizeM && parseInt(sizeM) > 0) sizeQuantities['M'] = parseInt(sizeM);
+    if (sizeL && parseInt(sizeL) > 0) sizeQuantities['L'] = parseInt(sizeL);
+    if (sizeXL && parseInt(sizeXL) > 0) sizeQuantities['XL'] = parseInt(sizeXL);
 
     setSaving(true);
     try {
       await axios.post(`${BACKEND_URL}/api/products`, {
         name: name.trim(),
         price: Number(price),
-        stock: Number(stock),
+        stock: totalStock,
         category: category.trim(),
-        size: size.trim(),
+        size: '', // Deprecated, kept for compatibility
+        sizeQuantities: sizeQuantities,
         color: color.trim(),
         images: [imageData]
       });
