@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator, Alert, AppState } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const INACTIVITY_TIMEOUT = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
 
 export default function Index() {
   const router = useRouter();
@@ -14,13 +15,66 @@ export default function Index() {
   const [shopName, setShopName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [upiId, setUpiId] = useState('');
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    checkSetup();
+    checkAuthAndSetup();
+
+    // Setup app state listener for auto-logout
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
-  const checkSetup = async () => {
+  const handleAppStateChange = async (nextAppState: any) => {
+    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      // App has come to foreground, check for inactivity
+      await checkInactivityTimeout();
+    }
+    appState.current = nextAppState;
+  };
+
+  const checkInactivityTimeout = async () => {
     try {
+      const lastActiveTime = await AsyncStorage.getItem('lastActiveTime');
+      const authToken = await AsyncStorage.getItem('authToken');
+
+      if (lastActiveTime && authToken) {
+        const timeSinceLastActive = Date.now() - parseInt(lastActiveTime);
+        
+        if (timeSinceLastActive > INACTIVITY_TIMEOUT) {
+          // Auto logout - clear auth data
+          await AsyncStorage.multiRemove(['authToken', 'lastActiveTime', 'setupCompleted']);
+          Alert.alert('Session Expired', 'You have been logged out due to inactivity.', [
+            { text: 'OK', onPress: () => router.replace('/signin') }
+          ]);
+        } else {
+          // Update last active time
+          await AsyncStorage.setItem('lastActiveTime', Date.now().toString());
+        }
+      }
+    } catch (error) {
+      console.error('Error checking inactivity:', error);
+    }
+  };
+
+  const checkAuthAndSetup = async () => {
+    try {
+      // Check if user is authenticated
+      const authToken = await AsyncStorage.getItem('authToken');
+      
+      if (!authToken) {
+        // Not authenticated, go to signin
+        router.replace('/signin');
+        return;
+      }
+
+      // Update last active time
+      await AsyncStorage.setItem('lastActiveTime', Date.now().toString());
+
+      // Check if setup is completed
       const response = await axios.get(`${BACKEND_URL}/api/settings`);
       if (response.data.setupCompleted) {
         await AsyncStorage.setItem('setupCompleted', 'true');
