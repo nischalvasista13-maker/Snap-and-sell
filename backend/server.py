@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,10 +6,9 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List
-import uuid
+from typing import List, Optional
 from datetime import datetime
-
+from bson import ObjectId
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -19,38 +18,200 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
+# Create the main app
 app = FastAPI()
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# Helper function to convert ObjectId to string
+def object_id_to_str(doc):
+    if doc and '_id' in doc:
+        doc['_id'] = str(doc['_id'])
+    return doc
 
-# Define Models
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+# ===== MODELS =====
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class Settings(BaseModel):
+    shopName: str
+    ownerName: str
+    setupCompleted: bool = True
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
+class SettingsResponse(BaseModel):
+    id: str = Field(alias="_id")
+    shopName: str
+    ownerName: str
+    setupCompleted: bool
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
+    class Config:
+        populate_by_name = True
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+class Product(BaseModel):
+    name: str
+    price: float
+    stock: int
+    category: Optional[str] = ""
+    size: Optional[str] = ""
+    color: Optional[str] = ""
+    images: List[str] = []  # Base64 images
+    createdAt: Optional[datetime] = None
+    updatedAt: Optional[datetime] = None
+
+class ProductResponse(BaseModel):
+    id: str = Field(alias="_id")
+    name: str
+    price: float
+    stock: int
+    category: Optional[str] = ""
+    size: Optional[str] = ""
+    color: Optional[str] = ""
+    images: List[str] = []
+    createdAt: Optional[datetime] = None
+    updatedAt: Optional[datetime] = None
+
+    class Config:
+        populate_by_name = True
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    stock: Optional[int] = None
+    category: Optional[str] = None
+    size: Optional[str] = None
+    color: Optional[str] = None
+    images: Optional[List[str]] = None
+
+class SaleItem(BaseModel):
+    productId: str
+    productName: str
+    quantity: int
+    price: float
+    image: str
+
+class Sale(BaseModel):
+    items: List[SaleItem]
+    total: float
+    paymentMethod: str
+    timestamp: Optional[datetime] = None
+    date: Optional[str] = None
+
+class SaleResponse(BaseModel):
+    id: str = Field(alias="_id")
+    items: List[SaleItem]
+    total: float
+    paymentMethod: str
+    timestamp: datetime
+    date: str
+
+    class Config:
+        populate_by_name = True
+
+# ===== SETTINGS ENDPOINTS =====
+
+@api_router.post("/settings/setup")
+async def create_setup(settings: Settings):
+    # Check if setup already exists
+    existing = await db.settings.find_one()
+    if existing:
+        raise HTTPException(status_code=400, detail="Setup already completed")
+    
+    settings_dict = settings.dict()
+    result = await db.settings.insert_one(settings_dict)
+    settings_dict['_id'] = str(result.inserted_id)
+    return settings_dict
+
+@api_router.get("/settings")
+async def get_settings():
+    settings = await db.settings.find_one()
+    if not settings:
+        return {"setupCompleted": False}
+    return object_id_to_str(settings)
+
+# ===== PRODUCT ENDPOINTS =====
+
+@api_router.post("/products")
+async def create_product(product: Product):
+    product_dict = product.dict()
+    product_dict['createdAt'] = datetime.utcnow()
+    product_dict['updatedAt'] = datetime.utcnow()
+    
+    result = await db.products.insert_one(product_dict)
+    product_dict['_id'] = str(result.inserted_id)
+    return product_dict
+
+@api_router.get("/products")
+async def get_products():
+    products = await db.products.find().to_list(1000)
+    return [object_id_to_str(p) for p in products]
+
+@api_router.get("/products/{product_id}")
+async def get_product(product_id: str):
+    try:
+        product = await db.products.find_one({"_id": ObjectId(product_id)})
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        return object_id_to_str(product)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.put("/products/{product_id}")
+async def update_product(product_id: str, product_update: ProductUpdate):
+    try:
+        update_dict = {k: v for k, v in product_update.dict().items() if v is not None}
+        update_dict['updatedAt'] = datetime.utcnow()
+        
+        result = await db.products.update_one(
+            {"_id": ObjectId(product_id)},
+            {"$set": update_dict}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        updated_product = await db.products.find_one({"_id": ObjectId(product_id)})
+        return object_id_to_str(updated_product)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.delete("/products/{product_id}")
+async def delete_product(product_id: str):
+    try:
+        result = await db.products.delete_one({"_id": ObjectId(product_id)})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Product not found")
+        return {"message": "Product deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# ===== SALES ENDPOINTS =====
+
+@api_router.post("/sales")
+async def create_sale(sale: Sale):
+    sale_dict = sale.dict()
+    sale_dict['timestamp'] = datetime.utcnow()
+    sale_dict['date'] = datetime.utcnow().strftime('%Y-%m-%d')
+    
+    # Update stock for each item
+    for item in sale_dict['items']:
+        await db.products.update_one(
+            {"_id": ObjectId(item['productId'])},
+            {"$inc": {"stock": -item['quantity']}}
+        )
+    
+    result = await db.sales.insert_one(sale_dict)
+    sale_dict['_id'] = str(result.inserted_id)
+    return sale_dict
+
+@api_router.get("/sales/today")
+async def get_today_sales():
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    sales = await db.sales.find({"date": today}).to_list(1000)
+    return [object_id_to_str(s) for s in sales]
+
+@api_router.get("/sales")
+async def get_all_sales():
+    sales = await db.sales.find().sort("timestamp", -1).to_list(1000)
+    return [object_id_to_str(s) for s in sales]
 
 # Include the router in the main app
 app.include_router(api_router)
