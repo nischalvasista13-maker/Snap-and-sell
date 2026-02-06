@@ -30,6 +30,20 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# JWT settings
+SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
+
+# Email settings
+ADMIN_EMAIL = "nischal.vasista13@gmail.com"
+
+# Security
+security = HTTPBearer()
+
 # Helper function to convert ObjectId to string
 def object_id_to_str(doc):
     if doc and '_id' in doc:
