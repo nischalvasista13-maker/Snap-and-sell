@@ -41,6 +41,9 @@ export default function TodaySales() {
   const [selectedFilter, setSelectedFilter] = useState<DateFilter>('today');
   const [showFilterModal, setShowFilterModal] = useState(false);
   
+  // Payment summary state
+  const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
+  
   // Custom date range
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
@@ -48,7 +51,7 @@ export default function TodaySales() {
   const [showEndPicker, setShowEndPicker] = useState(false);
 
   useEffect(() => {
-    loadSales();
+    loadSalesAndSummary();
   }, [selectedFilter, startDate, endDate]);
 
   const getDateRange = () => {
