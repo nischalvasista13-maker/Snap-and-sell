@@ -294,7 +294,21 @@ async def create_product(product: Product):
 
 @api_router.get("/products")
 async def get_products():
-    products = await db.products.find().to_list(1000)
+    # Optimized query with projection - only fetch needed fields
+    products = await db.products.find(
+        {},
+        {
+            'name': 1, 
+            'price': 1, 
+            'stock': 1, 
+            'images': 1, 
+            'category': 1,
+            'size': 1,
+            'color': 1,
+            'createdAt': 1,
+            'updatedAt': 1
+        }
+    ).to_list(500)  # Reasonable limit
     return [object_id_to_str(p) for p in products]
 
 @api_router.get("/products/{product_id}")
