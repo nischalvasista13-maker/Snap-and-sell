@@ -265,11 +265,14 @@ frontend:
     file: "/app/frontend/app/today-sales.tsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Sales list for current day with stats summary and pull-to-refresh"
+      - working: "NA"
+        agent: "main"
+        comment: "Enhanced with payment-wise breakdown (Cash, UPI, Card, Credit totals). Added empty state handling. Now uses explicit date parameters for all API calls. Credit sales clearly marked as unpaid."
 
   - task: "Inventory Management"
     implemented: true
