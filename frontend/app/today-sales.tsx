@@ -96,22 +96,27 @@ export default function TodaySales() {
     };
   };
 
-  const loadSales = async () => {
+  const loadSalesAndSummary = async () => {
     try {
       const { startDate: start, endDate: end } = getDateRange();
       
-      let response;
-      if (selectedFilter === 'today') {
-        response = await axios.get(`${BACKEND_URL}/api/sales/today`);
-      } else {
-        response = await axios.get(`${BACKEND_URL}/api/sales/date-range`, {
+      // Always use date-range endpoint with explicit dates (even for "Today")
+      const [salesResponse, summaryResponse] = await Promise.all([
+        axios.get(`${BACKEND_URL}/api/sales/date-range`, {
           params: { start_date: start, end_date: end }
-        });
-      }
+        }),
+        axios.get(`${BACKEND_URL}/api/sales/summary`, {
+          params: { start_date: start, end_date: end }
+        })
+      ]);
       
-      setSales(response.data);
+      setSales(salesResponse.data);
+      setPaymentSummary(summaryResponse.data);
     } catch (error) {
       console.error('Error loading sales:', error);
+      // Reset to empty state on error
+      setSales([]);
+      setPaymentSummary(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
