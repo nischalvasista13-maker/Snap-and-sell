@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as ImageManipulator from 'expo-image-manipulator';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function Sell() {
   const router = useRouter();

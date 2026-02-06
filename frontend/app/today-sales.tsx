@@ -6,7 +6,7 @@ import axios from 'axios';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Use environment variable for backend URL, fallback to relative path for web
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || '';
 
 // Log the backend URL on startup (for debugging)
 console.log('[TodaySales] Using BACKEND_URL:', BACKEND_URL || '(relative path)');

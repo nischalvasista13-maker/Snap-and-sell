@@ -6,7 +6,7 @@ import QRCode from 'react-native-qrcode-svg';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
 
 interface CartItem {
   productId: string;
