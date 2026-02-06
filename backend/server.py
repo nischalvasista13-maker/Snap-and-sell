@@ -416,6 +416,72 @@ async def get_sales_by_date_range(start_date: str, end_date: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@api_router.get("/sales/summary")
+async def get_sales_summary(start_date: str, end_date: str):
+    """Get sales summary with payment-wise breakdown for date range"""
+    try:
+        # Aggregate sales by payment method
+        pipeline = [
+            {
+                "$match": {
+                    "date": {
+                        "$gte": start_date,
+                        "$lte": end_date
+                    }
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$paymentMethod",
+                    "total": {"$sum": "$total"},
+                    "count": {"$sum": 1}
+                }
+            }
+        ]
+        
+        result = await db.sales.aggregate(pipeline).to_list(100)
+        
+        # Initialize summary
+        summary = {
+            "totalSales": 0,
+            "cashTotal": 0,
+            "upiTotal": 0,
+            "cardTotal": 0,
+            "creditTotal": 0,
+            "otherTotal": 0,
+            "totalTransactions": 0,
+            "breakdown": {}
+        }
+        
+        # Process aggregation results
+        for item in result:
+            payment_method = item['_id'].lower() if item['_id'] else 'other'
+            total = item['total']
+            count = item['count']
+            
+            summary["totalSales"] += total
+            summary["totalTransactions"] += count
+            
+            if payment_method == 'cash':
+                summary["cashTotal"] = total
+            elif payment_method == 'upi':
+                summary["upiTotal"] = total
+            elif payment_method == 'card':
+                summary["cardTotal"] = total
+            elif payment_method == 'credit':
+                summary["creditTotal"] = total
+            else:
+                summary["otherTotal"] += total
+            
+            summary["breakdown"][payment_method] = {
+                "total": total,
+                "count": count
+            }
+        
+        return summary
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @api_router.get("/sales")
 async def get_all_sales():
     # Optimized query with projection, sort, and limit
