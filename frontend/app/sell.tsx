@@ -4,6 +4,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -44,14 +45,25 @@ export default function Sell() {
       setCapturing(true);
       try {
         const photo = await cameraRef.takePictureAsync({
-          quality: 0.7,
-          base64: true,
+          quality: 0.5,
+          base64: false,
         });
+        
+        // Compress and resize image
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
+          photo.uri,
+          [{ resize: { width: 800 } }],
+          { 
+            compress: 0.6, 
+            format: ImageManipulator.SaveFormat.JPEG,
+            base64: true 
+          }
+        );
         
         // Navigate to item match selection
         router.push({
           pathname: '/item-match',
-          params: { imageData: `data:image/jpg;base64,${photo.base64}` }
+          params: { imageData: `data:image/jpeg;base64,${manipulatedImage.base64}` }
         });
       } catch (error) {
         console.error('Error taking picture:', error);
