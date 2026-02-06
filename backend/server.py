@@ -129,6 +129,25 @@ async def get_settings():
         return {"setupCompleted": False}
     return object_id_to_str(settings)
 
+@api_router.put("/settings/{settings_id}")
+async def update_settings(settings_id: str, settings_update: Settings):
+    try:
+        update_dict = settings_update.dict()
+        update_dict.pop('setupCompleted', None)  # Don't allow changing setupCompleted
+        
+        result = await db.settings.update_one(
+            {"_id": ObjectId(settings_id)},
+            {"$set": update_dict}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Settings not found")
+        
+        updated_settings = await db.settings.find_one({"_id": ObjectId(settings_id)})
+        return object_id_to_str(updated_settings)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # ===== PRODUCT ENDPOINTS =====
 
 @api_router.post("/products")
