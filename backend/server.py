@@ -35,12 +35,14 @@ def object_id_to_str(doc):
 class Settings(BaseModel):
     shopName: str
     ownerName: str
+    upiId: Optional[str] = ""
     setupCompleted: bool = True
 
 class SettingsResponse(BaseModel):
     id: str = Field(alias="_id")
     shopName: str
     ownerName: str
+    upiId: Optional[str] = ""
     setupCompleted: bool
 
     class Config:
