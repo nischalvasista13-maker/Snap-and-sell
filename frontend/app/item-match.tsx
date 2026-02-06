@@ -128,6 +128,16 @@ export default function ItemMatch() {
     p.color?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Organize products: matched product first, then the rest
+  const organizedProducts = () => {
+    if (matchedProduct) {
+      // Remove matched product from list and put it first
+      const otherProducts = filteredProducts.filter(p => p._id !== matchedProduct._id);
+      return [matchedProduct, ...otherProducts];
+    }
+    return filteredProducts;
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -147,6 +157,22 @@ export default function ItemMatch() {
           <Ionicons name="cart" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
+
+      {/* Message Banner */}
+      {hasAttemptedMatch && capturedImage && (
+        <View style={matchedProduct ? styles.successBanner : styles.warningBanner}>
+          <Ionicons 
+            name={matchedProduct ? "checkmark-circle" : "information-circle"} 
+            size={20} 
+            color={matchedProduct ? "#34C759" : "#FF9500"} 
+          />
+          <Text style={matchedProduct ? styles.successText : styles.warningText}>
+            {matchedProduct 
+              ? "Suggested product based on image" 
+              : "Product not found. Select manually from list."}
+          </Text>
+        </View>
+      )}
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
