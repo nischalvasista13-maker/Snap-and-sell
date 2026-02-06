@@ -13,6 +13,7 @@ export default function Index() {
   const [setupMode, setSetupMode] = useState(false);
   const [shopName, setShopName] = useState('');
   const [ownerName, setOwnerName] = useState('');
+  const [upiId, setUpiId] = useState('');
 
   useEffect(() => {
     checkSetup();
