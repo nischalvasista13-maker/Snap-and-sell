@@ -72,19 +72,25 @@ export default function Settings() {
         {
           text: 'Sign Out',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              // Clear all auth data
-              await AsyncStorage.multiRemove(['authToken', 'lastActiveTime', 'setupCompleted', 'cart']);
-              router.replace('/signin');
-            } catch (error) {
-              console.error('Error signing out:', error);
-              Alert.alert('Error', 'Failed to sign out. Please try again.');
-            }
-          }
+          onPress: () => performSignOut()
         }
       ]
     );
+  };
+
+  const performSignOut = async () => {
+    try {
+      // Clear all auth data
+      await AsyncStorage.multiRemove(['authToken', 'lastActiveTime', 'setupCompleted', 'cart']);
+      
+      // Use a slight delay to ensure AsyncStorage clears before navigation
+      setTimeout(() => {
+        router.replace('/signin');
+      }, 100);
+    } catch (error) {
+      console.error('Error signing out:', error);
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+    }
   };
 
   if (loading) {
