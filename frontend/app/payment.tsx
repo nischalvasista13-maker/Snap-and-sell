@@ -42,6 +42,19 @@ export default function Payment() {
       return;
     }
 
+    // If UPI is selected, navigate to UPI QR screen
+    if (selectedMethod === 'upi') {
+      router.push({
+        pathname: '/upi-qr',
+        params: {
+          total: calculateTotal().toString(),
+          cartJson: JSON.stringify(cart)
+        }
+      });
+      return;
+    }
+
+    // For other payment methods, complete directly
     setProcessing(true);
     try {
       const saleData = {
