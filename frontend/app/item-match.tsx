@@ -40,9 +40,9 @@ export default function ItemMatch() {
       const allProducts = response.data;
       setProducts(allProducts);
       
-      // If we have a captured image, try to match it
+      // If we have a captured image, generate suggestions
       if (capturedImage) {
-        matchProductByImage(capturedImage, allProducts);
+        await generateProductSuggestions(capturedImage, allProducts);
       }
     } catch (error) {
       console.error('Error loading products:', error);
@@ -52,40 +52,130 @@ export default function ItemMatch() {
     }
   };
 
-  const matchProductByImage = (capturedImg: string, allProducts: Product[]) => {
-    setHasAttemptedMatch(true);
+  const extractImageMetadata = async (base64Image: string) => {
+    return new Promise<{width: number, height: number, aspectRatio: number}>((resolve) => {
+      if (!base64Image) {
+        resolve({width: 0, height: 0, aspectRatio: 1});
+        return;
+      }
+
+      // Get image dimensions using Image component
+      Image.getSize(
+        base64Image,
+        (width, height) => {
+          const aspectRatio = width / height;
+          resolve({width, height, aspectRatio});
+        },
+        (error) => {
+          console.error('Error getting image size:', error);
+          resolve({width: 0, height: 0, aspectRatio: 1});
+        }
+      );
+    });
+  };
+
+  const calculateDominantColor = (base64Image: string): string => {
+    // Extract a simple color signature from base64 string
+    // Since we can't do pixel analysis in React Native easily,
+    // we'll use the base64 string character distribution as a proxy
+    const base64Data = base64Image.split(',')[1] || base64Image;
     
-    // Strategy 1: Try exact image match
-    const exactMatch = allProducts.find(product => 
-      product.images && product.images.some(img => img === capturedImg)
-    );
+    // Sample characters to get a color signature
+    const sample = base64Data.slice(0, 1000);
+    let colorScore = 0;
     
-    if (exactMatch) {
-      setMatchedProduct(exactMatch);
-      return;
+    for (let i = 0; i < sample.length; i++) {
+      colorScore += sample.charCodeAt(i);
     }
     
-    // Strategy 2: Get recently added products (last 5)
-    const sortedByDate = [...allProducts].sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    });
+    // Normalize to a simple color category
+    const normalized = (colorScore % 360);
     
-    const recentProducts = sortedByDate.slice(0, 5);
+    if (normalized < 60) return 'red-orange';
+    if (normalized < 120) return 'yellow-green';
+    if (normalized < 180) return 'green-cyan';
+    if (normalized < 240) return 'cyan-blue';
+    if (normalized < 300) return 'blue-purple';
+    return 'purple-red';
+  };
+
+  const generateProductSuggestions = async (capturedImg: string, allProducts: Product[]) => {
+    setHasAttemptedMatch(true);
     
-    // Strategy 3: Try to match by comparing image data length (similar images might have similar size)
-    const capturedLength = capturedImg.length;
-    const similarProduct = recentProducts.find(product => {
-      if (!product.images || product.images.length === 0) return false;
-      const productImgLength = product.images[0].length;
-      const lengthDiff = Math.abs(capturedLength - productImgLength);
-      const percentageDiff = (lengthDiff / capturedLength) * 100;
-      return percentageDiff < 5; // Less than 5% difference in size
-    });
-    
-    if (similarProduct) {
-      setMatchedProduct(similarProduct);
+    if (allProducts.length === 0) {
+      return;
+    }
+
+    try {
+      // Extract metadata from captured image
+      const capturedMetadata = await extractImageMetadata(capturedImg);
+      const capturedColor = calculateDominantColor(capturedImg);
+      
+      // Get recently added products (last 10)
+      const sortedByDate = [...allProducts].sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+      
+      const recentProducts = sortedByDate.slice(0, 10);
+      
+      // Score each recent product based on similarity
+      const scoredProducts = await Promise.all(
+        recentProducts.map(async (product) => {
+          if (!product.images || product.images.length === 0) {
+            return {product, score: 0};
+          }
+
+          let totalScore = 0;
+          
+          // Get metadata for product's first image
+          const productMetadata = await extractImageMetadata(product.images[0]);
+          const productColor = calculateDominantColor(product.images[0]);
+          
+          // Score 1: Aspect Ratio Similarity (0-30 points)
+          const aspectRatioDiff = Math.abs(capturedMetadata.aspectRatio - productMetadata.aspectRatio);
+          const aspectRatioScore = Math.max(0, 30 - (aspectRatioDiff * 30));
+          totalScore += aspectRatioScore;
+          
+          // Score 2: Dimension Similarity (0-30 points)
+          if (capturedMetadata.width > 0 && productMetadata.width > 0) {
+            const widthRatio = Math.min(capturedMetadata.width, productMetadata.width) / 
+                               Math.max(capturedMetadata.width, productMetadata.width);
+            const heightRatio = Math.min(capturedMetadata.height, productMetadata.height) / 
+                                Math.max(capturedMetadata.height, productMetadata.height);
+            const dimensionScore = ((widthRatio + heightRatio) / 2) * 30;
+            totalScore += dimensionScore;
+          }
+          
+          // Score 3: Color Similarity (0-20 points)
+          const colorScore = capturedColor === productColor ? 20 : 0;
+          totalScore += colorScore;
+          
+          // Score 4: Image Size Similarity (0-20 points)
+          const capturedLength = capturedImg.length;
+          const productLength = product.images[0].length;
+          const lengthDiff = Math.abs(capturedLength - productLength);
+          const percentageDiff = (lengthDiff / capturedLength) * 100;
+          const sizeScore = Math.max(0, 20 - percentageDiff);
+          totalScore += sizeScore;
+          
+          return {product, score: totalScore};
+        })
+      );
+      
+      // Find best match (threshold: 40+ points out of 100)
+      const bestMatch = scoredProducts.reduce((best, current) => 
+        current.score > best.score ? current : best
+      , {product: null, score: 0});
+      
+      // Only suggest if score is reasonable (at least 40%)
+      if (bestMatch.score >= 40 && bestMatch.product) {
+        setMatchedProduct(bestMatch.product);
+      }
+      
+    } catch (error) {
+      console.error('Error generating suggestions:', error);
     }
   };
 
