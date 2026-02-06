@@ -329,49 +329,58 @@ export default function TodaySales() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {sales.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="receipt-outline" size={80} color="#CCC" />
-            <Text style={styles.emptyText}>No sales found</Text>
-            <Text style={styles.emptySubtext}>Sales for the selected period will appear here</Text>
-          </View>
-        ) : (
-          sales.map((sale, index) => (
-            <View key={sale._id} style={styles.saleCard}>
-              <View style={styles.saleHeader}>
-                <View style={styles.saleNumber}>
-                  <Text style={styles.saleNumberText}>#{sales.length - index}</Text>
-                </View>
-                <View style={styles.saleTime}>
-                  <Ionicons name="time-outline" size={16} color="#666" />
-                  <Text style={styles.timeText}>{formatTime(sale.timestamp)}</Text>
-                </View>
+        {sales.map((sale, index) => (
+          <View key={sale._id} style={styles.saleCard}>
+            <View style={styles.saleHeader}>
+              <View style={styles.saleNumber}>
+                <Text style={styles.saleNumberText}>#{sales.length - index}</Text>
               </View>
-
-              <View style={styles.saleItems}>
-                {sale.items.map((item, idx) => (
-                  <View key={idx} style={styles.itemRow}>
-                    <Text style={styles.itemName}>
-                      {item.productName} x{item.quantity}
-                    </Text>
-                    <Text style={styles.itemPrice}>
-                      ₹{(item.price * item.quantity).toFixed(2)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              <View style={styles.saleFooter}>
-                <View style={styles.paymentBadge}>
-                  <Ionicons name="card-outline" size={14} color="#007AFF" />
-                  <Text style={styles.paymentMethod}>{sale.paymentMethod.toUpperCase()}</Text>
-                </View>
-                <Text style={styles.saleTotal}>₹{sale.total.toFixed(2)}</Text>
+              <View style={styles.saleTime}>
+                <Ionicons name="time-outline" size={16} color="#666" />
+                <Text style={styles.timeText}>{formatTime(sale.timestamp)}</Text>
               </View>
             </View>
-          ))
-        )}
+
+            <View style={styles.saleItems}>
+              {sale.items.map((item, idx) => (
+                <View key={idx} style={styles.itemRow}>
+                  <Text style={styles.itemName}>
+                    {item.productName} x{item.quantity}
+                  </Text>
+                  <Text style={styles.itemPrice}>
+                    ₹{(item.price * item.quantity).toFixed(2)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.saleFooter}>
+              <View style={[
+                styles.paymentBadge, 
+                sale.paymentMethod.toLowerCase() === 'credit' && styles.creditBadge
+              ]}>
+                <Ionicons 
+                  name={sale.paymentMethod.toLowerCase() === 'credit' ? 'time-outline' : 'card-outline'} 
+                  size={14} 
+                  color={sale.paymentMethod.toLowerCase() === 'credit' ? '#F44336' : '#007AFF'} 
+                />
+                <Text style={[
+                  styles.paymentMethod,
+                  sale.paymentMethod.toLowerCase() === 'credit' && styles.creditPaymentMethod
+                ]}>
+                  {sale.paymentMethod.toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.saleTotal}>₹{sale.total.toFixed(2)}</Text>
+            </View>
+          </View>
+        ))}
+        
+        {/* Bottom padding for scroll */}
+        <View style={{ height: 20 }} />
       </ScrollView>
+        </>
+      )}
 
       {/* Filter Modal */}
       <Modal
