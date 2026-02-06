@@ -188,4 +188,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  helpText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
 });
