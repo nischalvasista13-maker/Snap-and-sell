@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Modal, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Modal, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+// Use environment variable for backend URL, fallback to relative path for web
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+
+// Log the backend URL on startup (for debugging)
+console.log('[TodaySales] Using BACKEND_URL:', BACKEND_URL || '(relative path)');
 
 interface Sale {
   _id: string;
