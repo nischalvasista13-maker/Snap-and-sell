@@ -222,24 +222,105 @@ export default function TodaySales() {
         <Ionicons name="chevron-down" size={16} color="#666" />
       </TouchableOpacity>
 
-      {/* Summary Card */}
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryItem}>
-            <Ionicons name="receipt" size={32} color="#FF9500" />
-            <Text style={styles.summaryValue}>{sales.length}</Text>
-            <Text style={styles.summaryLabel}>Total Sales</Text>
-          </View>
-          
-          <View style={styles.divider} />
-          
-          <View style={styles.summaryItem}>
-            <Ionicons name="cash" size={32} color="#34C759" />
-            <Text style={styles.summaryValue}>₹{calculateTotalSales().toFixed(2)}</Text>
-            <Text style={styles.summaryLabel}>Total Revenue</Text>
-          </View>
+      {/* Empty State - No Sales in Period */}
+      {hasNoSales() ? (
+        <View style={styles.emptyStateContainer}>
+          <Ionicons name="receipt-outline" size={80} color="#CCC" />
+          <Text style={styles.emptyStateTitle}>No sales in the selected period</Text>
+          <Text style={styles.emptyStateSubtext}>
+            Try selecting a different date range or make some sales
+          </Text>
+          <TouchableOpacity 
+            style={styles.refreshButton} 
+            onPress={() => loadSalesAndSummary()}
+          >
+            <Ionicons name="refresh" size={20} color="#FF9500" />
+            <Text style={styles.refreshButtonText}>Refresh</Text>
+          </TouchableOpacity>
         </View>
-      </View>
+      ) : (
+        <>
+          {/* Summary Card with Payment Breakdown */}
+          <View style={styles.summaryCard}>
+            {/* Total Revenue Section */}
+            <View style={styles.totalRevenueSection}>
+              <View style={styles.totalRevenueContent}>
+                <Ionicons name="cash" size={28} color="#34C759" />
+                <View style={styles.totalRevenueText}>
+                  <Text style={styles.totalRevenueLabel}>Total Revenue</Text>
+                  <Text style={styles.totalRevenueValue}>
+                    ₹{paymentSummary?.totalSales.toFixed(2) || '0.00'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.transactionCount}>
+                <Text style={styles.transactionCountText}>
+                  {paymentSummary?.totalTransactions || sales.length} sales
+                </Text>
+              </View>
+            </View>
+
+            {/* Payment Method Breakdown */}
+            <View style={styles.paymentBreakdown}>
+              <Text style={styles.breakdownTitle}>Payment Breakdown</Text>
+              
+              <View style={styles.paymentGrid}>
+                {/* Cash */}
+                <View style={styles.paymentItem}>
+                  <View style={[styles.paymentIconContainer, { backgroundColor: '#E8F5E9' }]}>
+                    <Ionicons name="cash-outline" size={18} color="#4CAF50" />
+                  </View>
+                  <Text style={styles.paymentLabel}>Cash</Text>
+                  <Text style={styles.paymentAmount}>
+                    ₹{paymentSummary?.cashTotal.toFixed(2) || '0.00'}
+                  </Text>
+                </View>
+
+                {/* UPI */}
+                <View style={styles.paymentItem}>
+                  <View style={[styles.paymentIconContainer, { backgroundColor: '#E3F2FD' }]}>
+                    <Ionicons name="qr-code-outline" size={18} color="#2196F3" />
+                  </View>
+                  <Text style={styles.paymentLabel}>UPI</Text>
+                  <Text style={styles.paymentAmount}>
+                    ₹{paymentSummary?.upiTotal.toFixed(2) || '0.00'}
+                  </Text>
+                </View>
+
+                {/* Card */}
+                <View style={styles.paymentItem}>
+                  <View style={[styles.paymentIconContainer, { backgroundColor: '#FFF3E0' }]}>
+                    <Ionicons name="card-outline" size={18} color="#FF9800" />
+                  </View>
+                  <Text style={styles.paymentLabel}>Card</Text>
+                  <Text style={styles.paymentAmount}>
+                    ₹{paymentSummary?.cardTotal.toFixed(2) || '0.00'}
+                  </Text>
+                </View>
+
+                {/* Credit (Unpaid) */}
+                <View style={styles.paymentItem}>
+                  <View style={[styles.paymentIconContainer, { backgroundColor: '#FFEBEE' }]}>
+                    <Ionicons name="time-outline" size={18} color="#F44336" />
+                  </View>
+                  <Text style={styles.paymentLabel}>Credit</Text>
+                  <Text style={[styles.paymentAmount, { color: '#F44336' }]}>
+                    ₹{paymentSummary?.creditTotal.toFixed(2) || '0.00'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Credit Note */}
+              {paymentSummary && paymentSummary.creditTotal > 0 && (
+                <View style={styles.creditNote}>
+                  <Ionicons name="information-circle-outline" size={14} color="#F44336" />
+                  <Text style={styles.creditNoteText}>
+                    Credit sales are unpaid and pending collection
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
 
       <ScrollView 
         style={styles.content} 
