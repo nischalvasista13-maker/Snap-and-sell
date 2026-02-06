@@ -52,6 +52,22 @@ def object_id_to_str(doc):
 
 # ===== MODELS =====
 
+# Auth Models
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class ForgotPassword(BaseModel):
+    username: str
+
 class Settings(BaseModel):
     shopName: str
     ownerName: str
