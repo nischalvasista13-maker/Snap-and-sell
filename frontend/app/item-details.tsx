@@ -287,4 +287,62 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  helpText: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 12,
+  },
+  sizeGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  sizeInput: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  sizeLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  sizeField: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#1A1A1A',
+    textAlign: 'center',
+    width: '100%',
+  },
+  totalStock: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F0F7FF',
+    padding: 12,
+    borderRadius: 8,
+  },
+  totalStockLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  totalStockValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
 });
