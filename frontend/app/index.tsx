@@ -47,6 +47,7 @@ export default function Index() {
       await axios.post(`${BACKEND_URL}/api/settings/setup`, {
         shopName: shopName.trim(),
         ownerName: ownerName.trim(),
+        upiId: upiId.trim(),
         setupCompleted: true
       });
       await AsyncStorage.setItem('setupCompleted', 'true');
