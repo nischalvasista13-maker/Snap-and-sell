@@ -297,4 +297,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+    borderColor: '#FF3B30',
+    padding: 18,
+    borderRadius: 12,
+    gap: 8,
+  },
+  signOutButtonText: {
+    color: '#FF3B30',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
