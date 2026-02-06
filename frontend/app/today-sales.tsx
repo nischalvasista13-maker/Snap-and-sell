@@ -105,18 +105,18 @@ export default function TodaySales() {
       const { startDate: start, endDate: end } = getDateRange();
       
       console.log('[TodaySales] Fetching sales data...', {
-        backend: BACKEND_URL,
+        backend: API_URL,
         startDate: start,
         endDate: end
       });
       
       // Always use date-range endpoint with explicit dates (even for "Today")
       const [salesResponse, summaryResponse] = await Promise.all([
-        axios.get(`${BACKEND_URL}/api/sales/date-range`, {
+        axios.get(`${API_URL}/api/sales/date-range`, {
           params: { start_date: start, end_date: end },
           timeout: 15000 // 15 second timeout
         }),
-        axios.get(`${BACKEND_URL}/api/sales/summary`, {
+        axios.get(`${API_URL}/api/sales/summary`, {
           params: { start_date: start, end_date: end },
           timeout: 15000 // 15 second timeout
         })
@@ -137,7 +137,7 @@ export default function TodaySales() {
         status: error?.response?.status,
         statusText: error?.response?.statusText,
         url: error?.config?.url,
-        backendUrl: BACKEND_URL
+        backendUrl: API_URL
       });
       
       // Show user-friendly error for network issues
