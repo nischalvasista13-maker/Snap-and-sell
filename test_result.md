@@ -292,8 +292,22 @@ metadata:
   test_sequence: 0
   run_ui: false
 
+  - task: "Payment Summary API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "GET /api/sales/summary endpoint returns payment-wise breakdown (Cash, UPI, Card, Credit totals) for a date range. Uses MongoDB aggregation."
+
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Payment Summary API"
+    - "Today's Sales Report"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -303,3 +317,5 @@ agent_communication:
     message: "Completed implementation of camera-first POS app with all 11 screens. Backend has Settings, Products, and Sales APIs. All images stored as base64. Ready for backend testing."
   - agent: "testing"
     message: "✅ BACKEND TESTING COMPLETE: All 3 API groups (Settings, Products, Sales) fully tested and working. 15 test cases passed including full CRUD operations, stock management, and integration workflow. Created comprehensive test suite in backend_test.py. Backend APIs are production-ready."
+  - agent: "main"
+    message: "Implemented payment-wise summary feature. Backend endpoint /api/sales/summary is ready for testing. Frontend today-sales.tsx updated to show Cash, UPI, Card, Credit breakdowns with empty state handling."
