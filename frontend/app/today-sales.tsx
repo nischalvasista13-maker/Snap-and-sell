@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Modal, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -16,21 +17,84 @@ interface Sale {
   total: number;
   paymentMethod: string;
   timestamp: string;
+  date: string;
 }
+
+type DateFilter = 'today' | 'yesterday' | 'last7' | 'last30' | 'custom';
 
 export default function TodaySales() {
   const router = useRouter();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<DateFilter>('today');
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  
+  // Custom date range
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
 
   useEffect(() => {
     loadSales();
-  }, []);
+  }, [selectedFilter, startDate, endDate]);
+
+  const getDateRange = () => {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    switch (selectedFilter) {
+      case 'today':
+        start = new Date(today.setHours(0, 0, 0, 0));
+        end = new Date(today.setHours(23, 59, 59, 999));
+        break;
+      case 'yesterday':
+        start = new Date(today.setDate(today.getDate() - 1));
+        start.setHours(0, 0, 0, 0);
+        end = new Date(today);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'last7':
+        start = new Date(today.setDate(today.getDate() - 7));
+        start.setHours(0, 0, 0, 0);
+        end = new Date();
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'last30':
+        start = new Date(today.setDate(today.getDate() - 30));
+        start.setHours(0, 0, 0, 0);
+        end = new Date();
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'custom':
+        start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        break;
+    }
+
+    return {
+      startDate: start.toISOString().split('T')[0],
+      endDate: end.toISOString().split('T')[0]
+    };
+  };
 
   const loadSales = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/sales/today`);
+      const { startDate: start, endDate: end } = getDateRange();
+      
+      let response;
+      if (selectedFilter === 'today') {
+        response = await axios.get(`${BACKEND_URL}/api/sales/today`);
+      } else {
+        response = await axios.get(`${BACKEND_URL}/api/sales/date-range`, {
+          params: { start_date: start, end_date: end }
+        });
+      }
+      
       setSales(response.data);
     } catch (error) {
       console.error('Error loading sales:', error);
@@ -58,6 +122,43 @@ export default function TodaySales() {
     });
   };
 
+  const formatDateDisplay = (date: Date) => {
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const getFilterLabel = () => {
+    switch (selectedFilter) {
+      case 'today': return "Today's Sales";
+      case 'yesterday': return "Yesterday's Sales";
+      case 'last7': return 'Last 7 Days';
+      case 'last30': return 'Last 30 Days';
+      case 'custom': return `${formatDateDisplay(startDate)} - ${formatDateDisplay(endDate)}`;
+    }
+  };
+
+  const FilterOption = ({ filter, label, icon }: { filter: DateFilter, label: string, icon: string }) => (
+    <TouchableOpacity
+      style={[styles.filterOption, selectedFilter === filter && styles.filterOptionSelected]}
+      onPress={() => {
+        setSelectedFilter(filter);
+        if (filter !== 'custom') {
+          setShowFilterModal(false);
+        }
+      }}
+      activeOpacity={0.7}
+    >
+      <Ionicons name={icon as any} size={20} color={selectedFilter === filter ? '#FF9500' : '#666'} />
+      <Text style={[styles.filterOptionText, selectedFilter === filter && styles.filterOptionTextSelected]}>
+        {label}
+      </Text>
+      {selectedFilter === filter && <Ionicons name="checkmark" size={20} color="#FF9500" />}
+    </TouchableOpacity>
+  );
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -65,7 +166,7 @@ export default function TodaySales() {
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Today's Sales</Text>
+          <Text style={styles.headerTitle}>Sales</Text>
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.loadingContainer}>
@@ -81,9 +182,20 @@ export default function TodaySales() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Today's Sales</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>Sales</Text>
+        <TouchableOpacity onPress={() => setShowFilterModal(true)}>
+          <Ionicons name="filter" size={24} color="#FFF" />
+        </TouchableOpacity>
       </View>
+
+      {/* Current Filter Display */}
+      <TouchableOpacity style={styles.filterBar} onPress={() => setShowFilterModal(true)}>
+        <View style={styles.filterBarContent}>
+          <Ionicons name="calendar" size={16} color="#FF9500" />
+          <Text style={styles.filterBarText}>{getFilterLabel()}</Text>
+        </View>
+        <Ionicons name="chevron-down" size={16} color="#666" />
+      </TouchableOpacity>
 
       {/* Summary Card */}
       <View style={styles.summaryCard}>
@@ -114,8 +226,8 @@ export default function TodaySales() {
         {sales.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="receipt-outline" size={80} color="#CCC" />
-            <Text style={styles.emptyText}>No sales today</Text>
-            <Text style={styles.emptySubtext}>Sales will appear here once you complete transactions</Text>
+            <Text style={styles.emptyText}>No sales found</Text>
+            <Text style={styles.emptySubtext}>Sales for the selected period will appear here</Text>
           </View>
         ) : (
           sales.map((sale, index) => (
@@ -154,6 +266,98 @@ export default function TodaySales() {
           ))
         )}
       </ScrollView>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Sales</Text>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <FilterOption filter="today" label="Today" icon="today" />
+              <FilterOption filter="yesterday" label="Yesterday" icon="calendar" />
+              <FilterOption filter="last7" label="Last 7 Days" icon="calendar" />
+              <FilterOption filter="last30" label="Last 30 Days" icon="calendar" />
+              
+              <View style={styles.dividerLine} />
+              
+              <TouchableOpacity
+                style={[styles.filterOption, selectedFilter === 'custom' && styles.filterOptionSelected]}
+                onPress={() => setSelectedFilter('custom')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="calendar-outline" size={20} color={selectedFilter === 'custom' ? '#FF9500' : '#666'} />
+                <Text style={[styles.filterOptionText, selectedFilter === 'custom' && styles.filterOptionTextSelected]}>
+                  Custom Range
+                </Text>
+                {selectedFilter === 'custom' && <Ionicons name="checkmark" size={20} color="#FF9500" />}
+              </TouchableOpacity>
+
+              {selectedFilter === 'custom' && (
+                <View style={styles.customDateContainer}>
+                  <TouchableOpacity style={styles.dateButton} onPress={() => setShowStartPicker(true)}>
+                    <Text style={styles.dateButtonLabel}>Start Date</Text>
+                    <Text style={styles.dateButtonValue}>{formatDateDisplay(startDate)}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.dateButton} onPress={() => setShowEndPicker(true)}>
+                    <Text style={styles.dateButtonLabel}>End Date</Text>
+                    <Text style={styles.dateButtonValue}>{formatDateDisplay(endDate)}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.applyButton}
+                    onPress={() => {
+                      loadSales();
+                      setShowFilterModal(false);
+                    }}
+                  >
+                    <Text style={styles.applyButtonText}>Apply Filter</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Pickers */}
+      {showStartPicker && (
+        <DateTimePicker
+          value={startDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event, date) => {
+            setShowStartPicker(Platform.OS === 'ios');
+            if (date) setStartDate(date);
+          }}
+          maximumDate={new Date()}
+        />
+      )}
+
+      {showEndPicker && (
+        <DateTimePicker
+          value={endDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event, date) => {
+            setShowEndPicker(Platform.OS === 'ios');
+            if (date) setEndDate(date);
+          }}
+          maximumDate={new Date()}
+          minimumDate={startDate}
+        />
+      )}
     </View>
   );
 }
@@ -181,6 +385,26 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  filterBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  filterBarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  filterBarText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
   },
   summaryCard: {
     backgroundColor: '#FFF',
@@ -320,5 +544,89 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
     paddingHorizontal: 32,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 40,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  filterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+    marginHorizontal: 20,
+    borderRadius: 12,
+  },
+  filterOptionSelected: {
+    backgroundColor: '#FFF8F0',
+  },
+  filterOptionText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#666',
+  },
+  filterOptionTextSelected: {
+    color: '#FF9500',
+    fontWeight: '600',
+  },
+  dividerLine: {
+    height: 1,
+    backgroundColor: '#EEE',
+    marginHorizontal: 20,
+    marginVertical: 8,
+  },
+  customDateContainer: {
+    padding: 20,
+    gap: 12,
+  },
+  dateButton: {
+    backgroundColor: '#F5F5F5',
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateButtonLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  dateButtonValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  applyButton: {
+    backgroundColor: '#FF9500',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  applyButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
