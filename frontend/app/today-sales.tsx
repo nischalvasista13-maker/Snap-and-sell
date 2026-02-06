@@ -104,20 +104,51 @@ export default function TodaySales() {
     try {
       const { startDate: start, endDate: end } = getDateRange();
       
+      console.log('[TodaySales] Fetching sales data...', {
+        backend: BACKEND_URL,
+        startDate: start,
+        endDate: end
+      });
+      
       // Always use date-range endpoint with explicit dates (even for "Today")
       const [salesResponse, summaryResponse] = await Promise.all([
         axios.get(`${BACKEND_URL}/api/sales/date-range`, {
-          params: { start_date: start, end_date: end }
+          params: { start_date: start, end_date: end },
+          timeout: 15000 // 15 second timeout
         }),
         axios.get(`${BACKEND_URL}/api/sales/summary`, {
-          params: { start_date: start, end_date: end }
+          params: { start_date: start, end_date: end },
+          timeout: 15000 // 15 second timeout
         })
       ]);
       
+      console.log('[TodaySales] Data loaded successfully:', {
+        salesCount: salesResponse.data?.length || 0,
+        totalSales: summaryResponse.data?.totalSales || 0
+      });
+      
       setSales(salesResponse.data);
       setPaymentSummary(summaryResponse.data);
-    } catch (error) {
-      console.error('Error loading sales:', error);
+    } catch (error: any) {
+      // Detailed error logging
+      console.error('[TodaySales] API Error:', {
+        message: error?.message,
+        code: error?.code,
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        url: error?.config?.url,
+        backendUrl: BACKEND_URL
+      });
+      
+      // Show user-friendly error for network issues
+      if (error?.code === 'ECONNREFUSED' || error?.code === 'ERR_NETWORK' || !error?.response) {
+        Alert.alert(
+          'Connection Error',
+          'Unable to connect to the server. Please check your internet connection and try again.',
+          [{ text: 'OK' }]
+        );
+      }
+      
       // Reset to empty state on error
       setSales([]);
       setPaymentSummary(null);
