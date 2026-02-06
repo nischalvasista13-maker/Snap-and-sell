@@ -744,4 +744,141 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  // Empty state styles
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 100,
+    paddingHorizontal: 32,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#FFF8F0',
+    borderRadius: 12,
+  },
+  refreshButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF9500',
+  },
+  // Total revenue section
+  totalRevenueSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+    marginBottom: 16,
+  },
+  totalRevenueContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  totalRevenueText: {
+    flexDirection: 'column',
+  },
+  totalRevenueLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  totalRevenueValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginTop: 2,
+  },
+  transactionCount: {
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  transactionCountText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  // Payment breakdown styles
+  paymentBreakdown: {
+    paddingTop: 4,
+  },
+  breakdownTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 16,
+  },
+  paymentGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  paymentItem: {
+    width: '47%',
+    backgroundColor: '#FAFAFA',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  paymentIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  paymentLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  paymentAmount: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  creditNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 16,
+    padding: 10,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
+  },
+  creditNoteText: {
+    fontSize: 12,
+    color: '#F44336',
+    flex: 1,
+  },
+  // Credit badge styles
+  creditBadge: {
+    backgroundColor: '#FFEBEE',
+  },
+  creditPaymentMethod: {
+    color: '#F44336',
+  },
 });
