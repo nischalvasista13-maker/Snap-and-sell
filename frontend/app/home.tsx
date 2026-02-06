@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -15,6 +16,21 @@ export default function Home() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Update last active time whenever this screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      updateLastActiveTime();
+    }, [])
+  );
+
+  const updateLastActiveTime = async () => {
+    try {
+      await AsyncStorage.setItem('lastActiveTime', Date.now().toString());
+    } catch (error) {
+      console.error('Error updating last active time:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
