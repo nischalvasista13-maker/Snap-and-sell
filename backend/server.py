@@ -392,6 +392,30 @@ async def get_today_sales():
     ).sort("timestamp", -1).limit(200).to_list(200)
     return [object_id_to_str(s) for s in sales]
 
+@api_router.get("/sales/date-range")
+async def get_sales_by_date_range(start_date: str, end_date: str):
+    """Get sales between start_date and end_date (inclusive, format: YYYY-MM-DD)"""
+    try:
+        # Optimized query with date range and projection
+        sales = await db.sales.find(
+            {
+                "date": {
+                    "$gte": start_date,
+                    "$lte": end_date
+                }
+            },
+            {
+                'items': 1,
+                'total': 1,
+                'paymentMethod': 1,
+                'timestamp': 1,
+                'date': 1
+            }
+        ).sort("timestamp", -1).limit(500).to_list(500)
+        return [object_id_to_str(s) for s in sales]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @api_router.get("/sales")
 async def get_all_sales():
     # Optimized query with projection, sort, and limit
