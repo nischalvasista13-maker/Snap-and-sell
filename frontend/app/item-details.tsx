@@ -110,27 +110,71 @@ export default function ItemDetails() {
             />
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.label}>Price (₹) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0.00"
-                value={price}
-                onChangeText={setPrice}
-                keyboardType="decimal-pad"
-              />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Price (₹) *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="0.00"
+              value={price}
+              onChangeText={setPrice}
+              keyboardType="decimal-pad"
+            />
+          </View>
+
+          {/* Size-wise Quantity Section */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionLabel}>Size-wise Quantity *</Text>
+            <Text style={styles.helpText}>Enter quantity for each size (at least one required)</Text>
+            
+            <View style={styles.sizeGrid}>
+              <View style={styles.sizeInput}>
+                <Text style={styles.sizeLabel}>S</Text>
+                <TextInput
+                  style={styles.sizeField}
+                  placeholder="0"
+                  value={sizeS}
+                  onChangeText={setSizeS}
+                  keyboardType="number-pad"
+                />
+              </View>
+
+              <View style={styles.sizeInput}>
+                <Text style={styles.sizeLabel}>M</Text>
+                <TextInput
+                  style={styles.sizeField}
+                  placeholder="0"
+                  value={sizeM}
+                  onChangeText={setSizeM}
+                  keyboardType="number-pad"
+                />
+              </View>
+
+              <View style={styles.sizeInput}>
+                <Text style={styles.sizeLabel}>L</Text>
+                <TextInput
+                  style={styles.sizeField}
+                  placeholder="0"
+                  value={sizeL}
+                  onChangeText={setSizeL}
+                  keyboardType="number-pad"
+                />
+              </View>
+
+              <View style={styles.sizeInput}>
+                <Text style={styles.sizeLabel}>XL</Text>
+                <TextInput
+                  style={styles.sizeField}
+                  placeholder="0"
+                  value={sizeXL}
+                  onChangeText={setSizeXL}
+                  keyboardType="number-pad"
+                />
+              </View>
             </View>
 
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={styles.label}>Stock Qty *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0"
-                value={stock}
-                onChangeText={setStock}
-                keyboardType="number-pad"
-              />
+            <View style={styles.totalStock}>
+              <Text style={styles.totalStockLabel}>Total Stock:</Text>
+              <Text style={styles.totalStockValue}>{calculateTotalStock()}</Text>
             </View>
           </View>
 
@@ -145,28 +189,15 @@ export default function ItemDetails() {
             />
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.label}>Size</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="S, M, L, XL"
-                value={size}
-                onChangeText={setSize}
-                autoCapitalize="characters"
-              />
-            </View>
-
-            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={styles.label}>Color</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Blue"
-                value={color}
-                onChangeText={setColor}
-                autoCapitalize="words"
-              />
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Color</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Blue, Red, Black"
+              value={color}
+              onChangeText={setColor}
+              autoCapitalize="words"
+            />
           </View>
 
           <TouchableOpacity 
