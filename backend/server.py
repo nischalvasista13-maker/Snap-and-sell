@@ -39,7 +39,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
 
 # Email settings
-ADMIN_EMAIL = "nischal.vasista13@gmail.com"
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'nischal.vasista13@gmail.com')
 
 # Security
 security = HTTPBearer()
