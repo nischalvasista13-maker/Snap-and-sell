@@ -82,7 +82,7 @@ A mobile-first Android Point of Sale (POS) system designed for small fashion ret
 - Grant camera permissions when prompted
 
 **Web Preview:**
-- URL: https://snap-and-sell-3.preview.emergentagent.com
+- URL: https://retail-checkout-demo.preview.emergentagent.com
 - Note: Camera features won't work in web preview
 
 ### Using the App

@@ -11,7 +11,7 @@ import base64
 import sys
 
 # Backend URL configuration
-BACKEND_URL = "https://snap-and-sell-3.preview.emergentagent.com/api"
+BACKEND_URL = "https://retail-checkout-demo.preview.emergentagent.com/api"
 
 # Test data - Using realistic fashion retail data
 SHOP_SETUP = {
