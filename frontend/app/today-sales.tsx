@@ -433,7 +433,7 @@ export default function TodaySales() {
                   <TouchableOpacity 
                     style={styles.applyButton}
                     onPress={() => {
-                      loadSales();
+                      loadSalesAndSummary();
                       setShowFilterModal(false);
                     }}
                   >
