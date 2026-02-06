@@ -20,6 +20,17 @@ interface Sale {
   date: string;
 }
 
+interface PaymentSummary {
+  totalSales: number;
+  cashTotal: number;
+  upiTotal: number;
+  cardTotal: number;
+  creditTotal: number;
+  otherTotal: number;
+  totalTransactions: number;
+  breakdown: Record<string, { total: number; count: number }>;
+}
+
 type DateFilter = 'today' | 'yesterday' | 'last7' | 'last30' | 'custom';
 
 export default function TodaySales() {
