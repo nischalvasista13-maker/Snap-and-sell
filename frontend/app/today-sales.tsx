@@ -417,7 +417,10 @@ export default function TodaySales() {
                   {sale.paymentMethod.toUpperCase()}
                 </Text>
               </View>
-              <Text style={styles.saleTotal}>₹{sale.total.toFixed(2)}</Text>
+              <View style={styles.saleFooterRight}>
+                <Text style={styles.saleTotal}>₹{sale.total.toFixed(2)}</Text>
+                <Text style={styles.tapHint}>Tap for details →</Text>
+              </View>
             </View>
           </TouchableOpacity>
         ))}
