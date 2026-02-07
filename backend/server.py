@@ -529,6 +529,152 @@ async def get_all_sales():
     ).sort("timestamp", -1).limit(100).to_list(100)
     return [object_id_to_str(s) for s in sales]
 
+@api_router.get("/sales/{sale_id}")
+async def get_sale_by_id(sale_id: str):
+    """Get a specific sale by ID"""
+    try:
+        sale = await db.sales.find_one({"_id": ObjectId(sale_id)})
+        if not sale:
+            raise HTTPException(status_code=404, detail="Sale not found")
+        return object_id_to_str(sale)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# ===== RETURNS ENDPOINTS =====
+
+@api_router.post("/returns")
+async def create_return(return_data: Return):
+    """Create a return and update inventory"""
+    try:
+        # Verify original sale exists
+        original_sale = await db.sales.find_one({"_id": ObjectId(return_data.originalSaleId)})
+        if not original_sale:
+            raise HTTPException(status_code=404, detail="Original sale not found")
+        
+        return_dict = return_data.dict()
+        return_dict['timestamp'] = datetime.utcnow()
+        return_dict['date'] = datetime.utcnow().strftime('%Y-%m-%d')
+        
+        # Update inventory - increase stock for returned items
+        from pymongo import UpdateOne
+        bulk_operations = []
+        for item in return_dict['items']:
+            bulk_operations.append(
+                UpdateOne(
+                    {"_id": ObjectId(item['productId'])},
+                    {"$inc": {"stock": item['quantity']}}
+                )
+            )
+        
+        if bulk_operations:
+            await db.products.bulk_write(bulk_operations)
+        
+        # Insert return record
+        result = await db.returns.insert_one(return_dict)
+        return_dict['_id'] = str(result.inserted_id)
+        
+        return return_dict
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.get("/returns")
+async def get_all_returns():
+    """Get all returns"""
+    returns = await db.returns.find().sort("timestamp", -1).limit(100).to_list(100)
+    return [object_id_to_str(r) for r in returns]
+
+@api_router.get("/returns/by-sale/{sale_id}")
+async def get_returns_by_sale(sale_id: str):
+    """Get all returns for a specific sale"""
+    returns = await db.returns.find({"originalSaleId": sale_id}).to_list(100)
+    return [object_id_to_str(r) for r in returns]
+
+@api_router.post("/exchanges")
+async def create_exchange(
+    original_sale_id: str,
+    return_items: List[ReturnItem],
+    new_sale: Sale
+):
+    """Create an exchange - return items and create new sale"""
+    try:
+        # Verify original sale exists
+        original_sale = await db.sales.find_one({"_id": ObjectId(original_sale_id)})
+        if not original_sale:
+            raise HTTPException(status_code=404, detail="Original sale not found")
+        
+        # Calculate return total
+        return_total = sum(item.price * item.quantity for item in return_items)
+        
+        # Create the return record first
+        return_dict = {
+            "originalSaleId": original_sale_id,
+            "items": [item.dict() for item in return_items],
+            "returnTotal": return_total,
+            "reason": "Exchange",
+            "type": "exchange",
+            "timestamp": datetime.utcnow(),
+            "date": datetime.utcnow().strftime('%Y-%m-%d')
+        }
+        
+        # Update inventory - increase stock for returned items
+        from pymongo import UpdateOne
+        return_bulk_ops = [
+            UpdateOne(
+                {"_id": ObjectId(item.productId)},
+                {"$inc": {"stock": item.quantity}}
+            )
+            for item in return_items
+        ]
+        
+        if return_bulk_ops:
+            await db.products.bulk_write(return_bulk_ops)
+        
+        # Create the new sale
+        new_sale_dict = new_sale.dict()
+        new_sale_dict['timestamp'] = datetime.utcnow()
+        new_sale_dict['date'] = datetime.utcnow().strftime('%Y-%m-%d')
+        
+        # Update inventory - decrease stock for new sale items
+        sale_bulk_ops = [
+            UpdateOne(
+                {"_id": ObjectId(item['productId'])},
+                {"$inc": {"stock": -item['quantity']}}
+            )
+            for item in new_sale_dict['items']
+        ]
+        
+        if sale_bulk_ops:
+            await db.products.bulk_write(sale_bulk_ops)
+        
+        # Insert new sale
+        sale_result = await db.sales.insert_one(new_sale_dict)
+        new_sale_dict['_id'] = str(sale_result.inserted_id)
+        
+        # Link return to new sale
+        return_dict['exchangeSaleId'] = new_sale_dict['_id']
+        
+        # Insert return record
+        return_result = await db.returns.insert_one(return_dict)
+        return_dict['_id'] = str(return_result.inserted_id)
+        
+        # Calculate price difference
+        price_difference = new_sale.total - return_total
+        
+        return {
+            "return": return_dict,
+            "newSale": new_sale_dict,
+            "returnTotal": return_total,
+            "newSaleTotal": new_sale.total,
+            "priceDifference": price_difference,  # Positive = customer pays, Negative = refund
+            "message": "Exchange completed successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # Include the router in the main app
 app.include_router(api_router)
 
