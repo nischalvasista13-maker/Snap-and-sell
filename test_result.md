@@ -307,6 +307,66 @@ metadata:
         agent: "testing"
         comment: "✅ PASSED comprehensive Payment Summary API testing. All 4 test cases passed: today's date range ($1288.96 total, 5 transactions), week range aggregation, empty range returns zeros, missing parameters validation (422 error). Response structure verified: totalSales, cashTotal, upiTotal, cardTotal, creditTotal, otherTotal, totalTransactions, breakdown. Total calculation accuracy confirmed. API working perfectly."
 
+  - task: "Return and Exchange API - GET /api/sales/{sale_id}"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED GET /api/sales/{sale_id} endpoint testing. Successfully retrieved sale details with Total: $1000.0, Items: 1, Payment: upi. All required fields present (_id, items, total, paymentMethod). Working correctly."
+
+  - task: "Return and Exchange API - POST /api/returns"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED POST /api/returns endpoint testing. Successfully created return with Return ID: 6986f7a70b2bc5d0c520c716, Amount: $500.0. Return creation working correctly with proper data validation and inventory updates."
+
+  - task: "Return and Exchange API - GET /api/returns"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED GET /api/returns endpoint testing. Successfully retrieved 2 returns from database. API returns proper array format and works correctly."
+
+  - task: "Return and Exchange API - GET /api/returns/by-sale/{sale_id}"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED GET /api/returns/by-sale/{sale_id} endpoint testing. Successfully retrieved 2 returns for specific sale ID 6986209b50706c19f28759ab. Sale-specific filtering working correctly."
+
+  - task: "Return and Exchange API - Inventory Update Verification"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED Inventory Update Verification testing. Product LP Shirts current stock: 50. Return processing correctly increases inventory stock levels when items are returned. Inventory management working as expected."
+
 test_plan:
   current_focus:
     - "Payment Summary API"
