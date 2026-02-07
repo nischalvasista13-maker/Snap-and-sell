@@ -691,10 +691,18 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
+  saleFooterRight: {
+    alignItems: 'flex-end',
+  },
   saleTotal: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1A1A1A',
+  },
+  tapHint: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
   },
   emptyContainer: {
     alignItems: 'center',
