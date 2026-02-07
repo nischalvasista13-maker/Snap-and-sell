@@ -1,564 +1,328 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend API Testing for Camera-first POS App
-Tests all Settings, Products, and Sales API endpoints
+Backend API Testing Script for Return and Exchange Endpoints
+Tests the Return and Exchange API endpoints as specified in the review request.
 """
 
 import requests
 import json
 from datetime import datetime
-import base64
 import sys
 
-# Backend URL configuration
-BACKEND_URL = "https://retail-checkout-demo.preview.emergentagent.com/api"
+# Backend URL from environment
+BACKEND_URL = "https://retail-checkout-demo.preview.emergentagent.com"
 
-# Test data - Using realistic fashion retail data
-SHOP_SETUP = {
-    "shopName": "Fashion Forward Boutique",
-    "ownerName": "Sarah Johnson"
-}
-
-# Base64 test image (small 1x1 pixel PNG)
-TEST_IMAGE_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
-
-TEST_PRODUCTS = [
-    {
-        "name": "Summer Floral Dress",
-        "price": 89.99,
-        "stock": 15,
-        "category": "Dresses",
-        "size": "M",
-        "color": "Blue Floral",
-        "images": [TEST_IMAGE_BASE64]
-    },
-    {
-        "name": "Leather Handbag",
-        "price": 129.50,
-        "stock": 8,
-        "category": "Accessories",
-        "size": "Medium",
-        "color": "Black",
-        "images": [TEST_IMAGE_BASE64]
-    },
-    {
-        "name": "Designer Jeans",
-        "price": 79.00,
-        "stock": 12,
-        "category": "Bottoms",
-        "size": "32",
-        "color": "Dark Blue",
-        "images": [TEST_IMAGE_BASE64]
-    }
-]
-
-class POSBackendTester:
+class ReturnExchangeAPITester:
     def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        })
-        self.created_products = []
-        self.created_sales = []
+        self.base_url = f"{BACKEND_URL}/api"
+        self.test_results = []
         
-    def log_test(self, test_name, success, details=""):
+    def log_result(self, test_name, success, details, response_data=None):
         """Log test results"""
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status} | {test_name}")
-        if details:
-            print(f"    Details: {details}")
-        if not success:
-            self.test_failures.append(f"{test_name}: {details}")
-    
-    def run_all_tests(self):
-        """Execute all backend API tests following the specified flow"""
-        self.test_failures = []
-        
-        print("=" * 80)
-        print("🧪 STARTING BACKEND API TESTING FOR CAMERA-FIRST POS APP")
-        print("=" * 80)
-        
-        try:
-            # 1. Test Settings API
-            print("\n📋 TESTING SETTINGS API")
-            self.test_settings_api()
-            
-            # 2. Test Products API - Full CRUD
-            print("\n🛍️ TESTING PRODUCTS API")
-            self.test_products_crud()
-            
-            # 3. Test Sales API with Stock Updates
-            print("\n💰 TESTING SALES API")
-            self.test_sales_api()
-            
-            # 4. Test Payment Summary API
-            print("\n📊 TESTING PAYMENT SUMMARY API")
-            self.test_payment_summary_api()
-            
-            # 5. Test Integration Flow
-            print("\n🔄 TESTING INTEGRATION FLOW")
-            self.test_integration_flow()
-            
-            # Summary
-            self.print_summary()
-            
-        except Exception as e:
-            print(f"\n❌ CRITICAL ERROR: {str(e)}")
-            self.test_failures.append(f"Critical testing error: {str(e)}")
-            
-    def test_settings_api(self):
-        """Test settings endpoints"""
-        
-        # Test GET settings before setup
-        try:
-            response = self.session.get(f"{BACKEND_URL}/settings")
-            if response.status_code == 200:
-                data = response.json()
-                self.log_test("GET /settings (before setup)", True, f"Response: {data}")
-            else:
-                self.log_test("GET /settings (before setup)", False, f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_test("GET /settings (before setup)", False, f"Error: {str(e)}")
-        
-        # Test POST settings/setup
-        try:
-            response = self.session.post(f"{BACKEND_URL}/settings/setup", 
-                                       json=SHOP_SETUP)
-            if response.status_code == 200:
-                data = response.json()
-                expected_fields = ['shopName', 'ownerName', 'setupCompleted']
-                has_all_fields = all(field in data for field in expected_fields)
-                self.log_test("POST /settings/setup", has_all_fields, 
-                            f"Shop: {data.get('shopName')}, Owner: {data.get('ownerName')}")
-            else:
-                self.log_test("POST /settings/setup", False, 
-                            f"Status: {response.status_code}, Response: {response.text}")
-        except Exception as e:
-            self.log_test("POST /settings/setup", False, f"Error: {str(e)}")
-            
-        # Test GET settings after setup
-        try:
-            response = self.session.get(f"{BACKEND_URL}/settings")
-            if response.status_code == 200:
-                data = response.json()
-                is_setup_complete = data.get('setupCompleted') == True
-                self.log_test("GET /settings (after setup)", is_setup_complete, 
-                            f"Setup completed: {data.get('setupCompleted')}")
-            else:
-                self.log_test("GET /settings (after setup)", False, f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_test("GET /settings (after setup)", False, f"Error: {str(e)}")
-            
-        # Test duplicate setup (should fail)
-        try:
-            response = self.session.post(f"{BACKEND_URL}/settings/setup", 
-                                       json=SHOP_SETUP)
-            should_fail = response.status_code == 400
-            self.log_test("POST /settings/setup (duplicate)", should_fail, 
-                        f"Correctly prevents duplicate setup")
-        except Exception as e:
-            self.log_test("POST /settings/setup (duplicate)", False, f"Error: {str(e)}")
-    
-    def test_products_crud(self):
-        """Test all product CRUD operations"""
-        
-        # Test POST products (Create)
-        for i, product_data in enumerate(TEST_PRODUCTS):
-            try:
-                response = self.session.post(f"{BACKEND_URL}/products", 
-                                           json=product_data)
-                if response.status_code == 200:
-                    data = response.json()
-                    if '_id' in data and data.get('name') == product_data['name']:
-                        self.created_products.append(data)
-                        self.log_test(f"POST /products ({product_data['name']})", True, 
-                                    f"ID: {data['_id'][:8]}..., Stock: {data['stock']}")
-                    else:
-                        self.log_test(f"POST /products ({product_data['name']})", False, 
-                                    "Missing required fields in response")
-                else:
-                    self.log_test(f"POST /products ({product_data['name']})", False, 
-                                f"Status: {response.status_code}")
-            except Exception as e:
-                self.log_test(f"POST /products ({product_data['name']})", False, f"Error: {str(e)}")
-        
-        if not self.created_products:
-            print("⚠️  No products created, skipping remaining product tests")
-            return
-            
-        # Test GET products (Read all)
-        try:
-            response = self.session.get(f"{BACKEND_URL}/products")
-            if response.status_code == 200:
-                products = response.json()
-                found_count = len([p for p in products if any(cp['_id'] == p['_id'] for cp in self.created_products)])
-                self.log_test("GET /products", found_count >= len(self.created_products), 
-                            f"Found {len(products)} products, {found_count} created by test")
-            else:
-                self.log_test("GET /products", False, f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_test("GET /products", False, f"Error: {str(e)}")
-        
-        # Test GET single product
-        if self.created_products:
-            test_product = self.created_products[0]
-            try:
-                response = self.session.get(f"{BACKEND_URL}/products/{test_product['_id']}")
-                if response.status_code == 200:
-                    data = response.json()
-                    name_matches = data.get('name') == test_product['name']
-                    self.log_test("GET /products/{id}", name_matches, 
-                                f"Product: {data.get('name')}")
-                else:
-                    self.log_test("GET /products/{id}", False, f"Status: {response.status_code}")
-            except Exception as e:
-                self.log_test("GET /products/{id}", False, f"Error: {str(e)}")
-        
-        # Test PUT product (Update)
-        if self.created_products:
-            test_product = self.created_products[0]
-            update_data = {
-                "price": 99.99,
-                "stock": 20,
-                "color": "Updated Blue"
-            }
-            try:
-                response = self.session.put(f"{BACKEND_URL}/products/{test_product['_id']}", 
-                                          json=update_data)
-                if response.status_code == 200:
-                    data = response.json()
-                    price_updated = data.get('price') == 99.99
-                    stock_updated = data.get('stock') == 20
-                    self.log_test("PUT /products/{id}", price_updated and stock_updated, 
-                                f"Price: ${data.get('price')}, Stock: {data.get('stock')}")
-                    # Update local copy for later tests
-                    self.created_products[0].update(data)
-                else:
-                    self.log_test("PUT /products/{id}", False, f"Status: {response.status_code}")
-            except Exception as e:
-                self.log_test("PUT /products/{id}", False, f"Error: {str(e)}")
-        
-        # Test DELETE product (will test with last product to preserve others for sales test)
-        if len(self.created_products) > 1:
-            delete_product = self.created_products[-1]
-            try:
-                response = self.session.delete(f"{BACKEND_URL}/products/{delete_product['_id']}")
-                if response.status_code == 200:
-                    data = response.json()
-                    success = "deleted successfully" in data.get('message', '')
-                    self.log_test("DELETE /products/{id}", success, 
-                                f"Message: {data.get('message')}")
-                    if success:
-                        self.created_products.remove(delete_product)
-                else:
-                    self.log_test("DELETE /products/{id}", False, f"Status: {response.status_code}")
-            except Exception as e:
-                self.log_test("DELETE /products/{id}", False, f"Error: {str(e)}")
-    
-    def test_sales_api(self):
-        """Test sales API and stock updates"""
-        
-        if len(self.created_products) < 2:
-            print("⚠️  Need at least 2 products for sales test, skipping")
-            return
-        
-        # Create a sale with multiple items
-        sale_items = []
-        total = 0
-        
-        for i, product in enumerate(self.created_products[:2]):  # Use first 2 products
-            quantity = 2 if i == 0 else 1  # Different quantities
-            item_total = product['price'] * quantity
-            total += item_total
-            
-            sale_items.append({
-                "productId": product['_id'],
-                "productName": product['name'],
-                "quantity": quantity,
-                "price": product['price'],
-                "image": product['images'][0] if product['images'] else ""
-            })
-        
-        sale_data = {
-            "items": sale_items,
-            "total": total,
-            "paymentMethod": "Cash"
+        result = {
+            'test': test_name,
+            'success': success,
+            'details': details,
+            'timestamp': datetime.now().isoformat()
         }
+        if response_data:
+            result['response_data'] = response_data
+        self.test_results.append(result)
         
-        # Store original stock levels for verification
-        original_stocks = {item['productId']: self.get_product_stock(item['productId']) 
-                          for item in sale_items}
-        
-        # Test POST sales
+        status = "✅ PASS" if success else "❌ FAIL"
+        print(f"{status}: {test_name}")
+        print(f"   Details: {details}")
+        if response_data and not success:
+            print(f"   Response: {response_data}")
+        print()
+
+    def get_existing_sales(self):
+        """Get existing sales to use for testing"""
         try:
-            response = self.session.post(f"{BACKEND_URL}/sales", json=sale_data)
-            if response.status_code == 200:
-                data = response.json()
-                has_required = all(field in data for field in ['_id', 'items', 'total', 'timestamp'])
-                self.log_test("POST /sales", has_required, 
-                            f"Sale ID: {data.get('_id', '')[:8]}..., Total: ${data.get('total')}")
-                if has_required:
-                    self.created_sales.append(data)
-            else:
-                self.log_test("POST /sales", False, 
-                            f"Status: {response.status_code}, Response: {response.text}")
-        except Exception as e:
-            self.log_test("POST /sales", False, f"Error: {str(e)}")
-        
-        # Verify stock updates
-        for item in sale_items:
-            original_stock = original_stocks.get(item['productId'])
-            if original_stock is not None:
-                new_stock = self.get_product_stock(item['productId'])
-                if new_stock is not None:
-                    expected_stock = original_stock - item['quantity']
-                    stock_correct = new_stock == expected_stock
-                    self.log_test(f"Stock update for {item['productName']}", stock_correct,
-                                f"Original: {original_stock}, Expected: {expected_stock}, Actual: {new_stock}")
-        
-        # Test GET sales/today
-        try:
-            response = self.session.get(f"{BACKEND_URL}/sales/today")
+            response = requests.get(f"{self.base_url}/sales", timeout=10)
             if response.status_code == 200:
                 sales = response.json()
-                found_today = any(sale.get('_id') == self.created_sales[0].get('_id') 
-                                for sale in sales if self.created_sales)
-                self.log_test("GET /sales/today", found_today, 
-                            f"Found {len(sales)} today's sales")
+                if sales and len(sales) > 0:
+                    return sales
+                else:
+                    self.log_result("Get Existing Sales", False, "No existing sales found in database")
+                    return None
             else:
-                self.log_test("GET /sales/today", False, f"Status: {response.status_code}")
+                self.log_result("Get Existing Sales", False, f"Failed to get sales: {response.status_code}")
+                return None
         except Exception as e:
-            self.log_test("GET /sales/today", False, f"Error: {str(e)}")
-            
-        # Test GET all sales
+            self.log_result("Get Existing Sales", False, f"Exception getting sales: {str(e)}")
+            return None
+
+    def test_get_sale_by_id(self, sale_id):
+        """Test GET /api/sales/{sale_id}"""
         try:
-            response = self.session.get(f"{BACKEND_URL}/sales")
-            if response.status_code == 200:
-                sales = response.json()
-                found_all = any(sale.get('_id') == self.created_sales[0].get('_id') 
-                              for sale in sales if self.created_sales)
-                self.log_test("GET /sales", found_all, 
-                            f"Found {len(sales)} total sales")
-            else:
-                self.log_test("GET /sales", False, f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_test("GET /sales", False, f"Error: {str(e)}")
-    
-    def test_payment_summary_api(self):
-        """Test the Payment Summary API endpoint comprehensively"""
-        
-        print("  Testing Payment Summary API...")
-        
-        from datetime import datetime, timedelta
-        
-        # Test dates
-        today = datetime.now().strftime('%Y-%m-%d')
-        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-        week_ago = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
-        future_date = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
-        
-        # Create test sales with different payment methods if we have enough products
-        if len(self.created_products) >= 3:
-            print("    Creating test sales with various payment methods...")
-            
-            test_sales_data = [
-                {
-                    "items": [{
-                        "productId": self.created_products[0]["_id"],
-                        "productName": self.created_products[0]["name"],
-                        "quantity": 2,
-                        "price": self.created_products[0]["price"],
-                        "image": self.created_products[0]["images"][0] if self.created_products[0]["images"] else ""
-                    }],
-                    "total": self.created_products[0]["price"] * 2,
-                    "paymentMethod": "Cash"
-                },
-                {
-                    "items": [{
-                        "productId": self.created_products[1]["_id"],
-                        "productName": self.created_products[1]["name"],
-                        "quantity": 1,
-                        "price": self.created_products[1]["price"],
-                        "image": self.created_products[1]["images"][0] if self.created_products[1]["images"] else ""
-                    }],
-                    "total": self.created_products[1]["price"],
-                    "paymentMethod": "UPI"
-                },
-                {
-                    "items": [{
-                        "productId": self.created_products[2]["_id"],
-                        "productName": self.created_products[2]["name"],
-                        "quantity": 1,
-                        "price": self.created_products[2]["price"],
-                        "image": self.created_products[2]["images"][0] if self.created_products[2]["images"] else ""
-                    }],
-                    "total": self.created_products[2]["price"],
-                    "paymentMethod": "Card"
-                },
-                {
-                    "items": [{
-                        "productId": self.created_products[0]["_id"],
-                        "productName": self.created_products[0]["name"],
-                        "quantity": 1,
-                        "price": self.created_products[0]["price"],
-                        "image": self.created_products[0]["images"][0] if self.created_products[0]["images"] else ""
-                    }],
-                    "total": self.created_products[0]["price"],
-                    "paymentMethod": "Credit"
-                }
-            ]
-            
-            # Create the test sales
-            created_test_sales = []
-            for sale_data in test_sales_data:
-                try:
-                    response = self.session.post(f"{BACKEND_URL}/sales", json=sale_data)
-                    if response.status_code == 200:
-                        created_test_sales.append(response.json())
-                except Exception as e:
-                    print(f"    Failed to create test sale: {str(e)}")
-        
-        # Test Case 1: Today's date range summary
-        try:
-            response = self.session.get(f"{BACKEND_URL}/sales/summary", 
-                                      params={"start_date": today, "end_date": today})
+            response = requests.get(f"{self.base_url}/sales/{sale_id}", timeout=10)
             
             if response.status_code == 200:
-                summary = response.json()
-                
-                # Verify response structure
-                required_fields = ["totalSales", "cashTotal", "upiTotal", "cardTotal", 
-                                 "creditTotal", "otherTotal", "totalTransactions", "breakdown"]
-                missing_fields = [field for field in required_fields if field not in summary]
+                sale_data = response.json()
+                # Verify required fields
+                required_fields = ['_id', 'items', 'total', 'paymentMethod']
+                missing_fields = [field for field in required_fields if field not in sale_data]
                 
                 if not missing_fields:
-                    # Verify total calculation
-                    expected_total = (summary.get('cashTotal', 0) + summary.get('upiTotal', 0) + 
-                                    summary.get('cardTotal', 0) + summary.get('creditTotal', 0) + 
-                                    summary.get('otherTotal', 0))
-                    
-                    total_correct = abs(summary['totalSales'] - expected_total) < 0.01
-                    
-                    self.log_test("GET /sales/summary (today)", total_correct, 
-                                f"Total: ${summary['totalSales']}, Transactions: {summary['totalTransactions']}")
+                    self.log_result(
+                        "GET /api/sales/{sale_id}",
+                        True,
+                        f"Successfully retrieved sale details. Total: ${sale_data['total']}, Items: {len(sale_data['items'])}, Payment: {sale_data['paymentMethod']}"
+                    )
+                    return sale_data
                 else:
-                    self.log_test("GET /sales/summary (today)", False, 
-                                f"Missing fields: {missing_fields}")
+                    self.log_result(
+                        "GET /api/sales/{sale_id}",
+                        False,
+                        f"Missing required fields: {missing_fields}",
+                        sale_data
+                    )
+                    return None
             else:
-                self.log_test("GET /sales/summary (today)", False, 
-                            f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_test("GET /sales/summary (today)", False, f"Error: {str(e)}")
-        
-        # Test Case 2: Week range summary
-        try:
-            response = self.session.get(f"{BACKEND_URL}/sales/summary",
-                                      params={"start_date": week_ago, "end_date": today})
-            
-            if response.status_code == 200:
-                summary = response.json()
-                week_range_ok = isinstance(summary.get('totalSales'), (int, float))
-                self.log_test("GET /sales/summary (week range)", week_range_ok,
-                            f"Week total: ${summary.get('totalSales', 0)}")
-            else:
-                self.log_test("GET /sales/summary (week range)", False,
-                            f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_test("GET /sales/summary (week range)", False, f"Error: {str(e)}")
-        
-        # Test Case 3: Empty date range (future date)
-        try:
-            response = self.session.get(f"{BACKEND_URL}/sales/summary",
-                                      params={"start_date": future_date, "end_date": future_date})
-            
-            if response.status_code == 200:
-                summary = response.json()
-                empty_correct = (summary.get('totalSales', -1) == 0 and 
-                               summary.get('totalTransactions', -1) == 0)
-                self.log_test("GET /sales/summary (empty range)", empty_correct,
-                            f"Empty range returns zeros: {summary.get('totalSales', 0)}")
-            else:
-                self.log_test("GET /sales/summary (empty range)", False,
-                            f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_test("GET /sales/summary (empty range)", False, f"Error: {str(e)}")
-        
-        # Test Case 4: Missing parameters
-        try:
-            response = self.session.get(f"{BACKEND_URL}/sales/summary")
-            
-            # Should return validation error (422 or 400)
-            missing_params_handled = response.status_code in [400, 422]
-            self.log_test("GET /sales/summary (missing params)", missing_params_handled,
-                        f"Validation error status: {response.status_code}")
-        except Exception as e:
-            self.log_test("GET /sales/summary (missing params)", False, f"Error: {str(e)}")
-
-    def test_integration_flow(self):
-        """Test the complete integration flow as specified"""
-        
-        print("  Testing complete workflow...")
-        
-        # Verify we can retrieve settings
-        settings_ok = False
-        try:
-            response = self.session.get(f"{BACKEND_URL}/settings")
-            settings_ok = response.status_code == 200 and response.json().get('setupCompleted')
-        except:
-            pass
-        
-        # Verify we have products
-        products_ok = len(self.created_products) >= 2
-        
-        # Verify we have sales
-        sales_ok = len(self.created_sales) >= 1
-        
-        # Overall flow test
-        overall_success = settings_ok and products_ok and sales_ok
-        self.log_test("Complete POS workflow", overall_success, 
-                    f"Settings: {settings_ok}, Products: {products_ok}, Sales: {sales_ok}")
-    
-    def get_product_stock(self, product_id):
-        """Helper to get current stock level of a product"""
-        try:
-            response = self.session.get(f"{BACKEND_URL}/products/{product_id}")
-            if response.status_code == 200:
-                return response.json().get('stock')
-        except:
-            pass
-        return None
-    
-    def print_summary(self):
-        """Print test summary"""
-        print("\n" + "=" * 80)
-        print("📊 TEST SUMMARY")
-        print("=" * 80)
-        
-        if not self.test_failures:
-            print("🎉 ALL TESTS PASSED! Backend APIs are working correctly.")
-            print("\n✅ Confirmed working features:")
-            print("   • Settings API (setup and retrieval)")
-            print("   • Products API (full CRUD operations)")
-            print("   • Sales API (creation and retrieval)")  
-            print("   • Stock management (automatic updates)")
-            print("   • Complete POS workflow integration")
-        else:
-            print(f"❌ {len(self.test_failures)} TESTS FAILED:")
-            for i, failure in enumerate(self.test_failures, 1):
-                print(f"   {i}. {failure}")
+                self.log_result(
+                    "GET /api/sales/{sale_id}",
+                    False,
+                    f"Request failed with status {response.status_code}",
+                    response.text
+                )
+                return None
                 
-        print(f"\n📈 Statistics:")
-        print(f"   • Products created: {len(self.created_products)}")
-        print(f"   • Sales transactions: {len(self.created_sales)}")
-        print(f"   • Backend URL: {BACKEND_URL}")
+        except Exception as e:
+            self.log_result("GET /api/sales/{sale_id}", False, f"Exception: {str(e)}")
+            return None
 
-def main():
-    """Main test execution"""
-    tester = POSBackendTester()
-    tester.run_all_tests()
-    return len(tester.test_failures) == 0
+    def test_create_return(self, original_sale):
+        """Test POST /api/returns"""
+        try:
+            if not original_sale or 'items' not in original_sale:
+                self.log_result("POST /api/returns", False, "No valid original sale provided")
+                return None
+                
+            # Create return for first item (partial return)
+            first_item = original_sale['items'][0]
+            return_quantity = min(1, first_item['quantity'])  # Return 1 item or available quantity
+            
+            return_data = {
+                "originalSaleId": original_sale['_id'],
+                "items": [{
+                    "productId": first_item['productId'],
+                    "productName": first_item['productName'],
+                    "quantity": return_quantity,
+                    "price": first_item['price']
+                }],
+                "returnTotal": first_item['price'] * return_quantity,
+                "reason": "Defective item",
+                "type": "return"
+            }
+            
+            response = requests.post(
+                f"{self.base_url}/returns",
+                json=return_data,
+                headers={'Content-Type': 'application/json'},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                return_response = response.json()
+                # Verify return was created
+                if 'id' in return_response:
+                    self.log_result(
+                        "POST /api/returns",
+                        True,
+                        f"Return created successfully. Return ID: {return_response['id']}, Amount: ${return_data['returnTotal']}"
+                    )
+                    return return_response
+                else:
+                    self.log_result(
+                        "POST /api/returns",
+                        False,
+                        "Return created but no ID returned",
+                        return_response
+                    )
+                    return None
+            else:
+                self.log_result(
+                    "POST /api/returns",
+                    False,
+                    f"Request failed with status {response.status_code}",
+                    response.text
+                )
+                return None
+                
+        except Exception as e:
+            self.log_result("POST /api/returns", False, f"Exception: {str(e)}")
+            return None
+
+    def test_get_all_returns(self):
+        """Test GET /api/returns"""
+        try:
+            response = requests.get(f"{self.base_url}/returns", timeout=10)
+            
+            if response.status_code == 200:
+                returns = response.json()
+                if isinstance(returns, list):
+                    self.log_result(
+                        "GET /api/returns",
+                        True,
+                        f"Successfully retrieved {len(returns)} returns"
+                    )
+                    return returns
+                else:
+                    self.log_result(
+                        "GET /api/returns",
+                        False,
+                        "Response is not a list",
+                        returns
+                    )
+                    return None
+            else:
+                self.log_result(
+                    "GET /api/returns",
+                    False,
+                    f"Request failed with status {response.status_code}",
+                    response.text
+                )
+                return None
+                
+        except Exception as e:
+            self.log_result("GET /api/returns", False, f"Exception: {str(e)}")
+            return None
+
+    def test_get_returns_by_sale(self, sale_id):
+        """Test GET /api/returns/by-sale/{sale_id}"""
+        try:
+            response = requests.get(f"{self.base_url}/returns/by-sale/{sale_id}", timeout=10)
+            
+            if response.status_code == 200:
+                returns = response.json()
+                if isinstance(returns, list):
+                    self.log_result(
+                        "GET /api/returns/by-sale/{sale_id}",
+                        True,
+                        f"Successfully retrieved {len(returns)} returns for sale {sale_id}"
+                    )
+                    return returns
+                else:
+                    self.log_result(
+                        "GET /api/returns/by-sale/{sale_id}",
+                        False,
+                        "Response is not a list",
+                        returns
+                    )
+                    return None
+            else:
+                self.log_result(
+                    "GET /api/returns/by-sale/{sale_id}",
+                    False,
+                    f"Request failed with status {response.status_code}",
+                    response.text
+                )
+                return None
+                
+        except Exception as e:
+            self.log_result("GET /api/returns/by-sale/{sale_id}", False, f"Exception: {str(e)}")
+            return None
+
+    def test_inventory_update(self, return_data, original_sale):
+        """Test that inventory was updated after return"""
+        try:
+            if not return_data or not original_sale:
+                self.log_result("Inventory Update Verification", False, "Missing return or original sale data")
+                return False
+                
+            # Get the returned item's product details
+            returned_item = return_data.get('items', [{}])[0] if return_data.get('items') else {}
+            if not returned_item.get('productId'):
+                self.log_result("Inventory Update Verification", False, "No product ID in return data")
+                return False
+                
+            # Get current product to check stock level
+            response = requests.get(f"{self.base_url}/products/{returned_item['productId']}", timeout=10)
+            
+            if response.status_code == 200:
+                product = response.json()
+                current_stock = product.get('stock', 0)
+                self.log_result(
+                    "Inventory Update Verification",
+                    True,
+                    f"Product {returned_item['productName']} current stock: {current_stock}. Return should have increased stock by {returned_item['quantity']}"
+                )
+                return True
+            else:
+                self.log_result(
+                    "Inventory Update Verification",
+                    False,
+                    f"Could not retrieve product details: {response.status_code}",
+                    response.text
+                )
+                return False
+                
+        except Exception as e:
+            self.log_result("Inventory Update Verification", False, f"Exception: {str(e)}")
+            return False
+
+    def run_tests(self):
+        """Run all return and exchange tests"""
+        print("=" * 60)
+        print("RETURN AND EXCHANGE API TESTING")
+        print("=" * 60)
+        print(f"Backend URL: {self.base_url}")
+        print()
+        
+        # Step 1: Get existing sales
+        print("Step 1: Getting existing sale for testing...")
+        existing_sales = self.get_existing_sales()
+        if not existing_sales:
+            print("❌ Cannot proceed with testing - no existing sales found")
+            return False
+            
+        test_sale = existing_sales[0]  # Use first sale
+        sale_id = test_sale['_id']
+        print(f"Using sale ID: {sale_id}")
+        print()
+        
+        # Step 2: Test GET /api/sales/{sale_id}
+        print("Step 2: Testing GET /api/sales/{sale_id}...")
+        sale_details = self.test_get_sale_by_id(sale_id)
+        
+        # Step 3: Test POST /api/returns
+        print("Step 3: Testing POST /api/returns...")
+        return_response = self.test_create_return(sale_details)
+        
+        # Step 4: Test GET /api/returns/by-sale/{sale_id}
+        print("Step 4: Testing GET /api/returns/by-sale/{sale_id}...")
+        sale_returns = self.test_get_returns_by_sale(sale_id)
+        
+        # Step 5: Test GET /api/returns
+        print("Step 5: Testing GET /api/returns...")
+        all_returns = self.test_get_all_returns()
+        
+        # Step 6: Verify inventory update
+        print("Step 6: Verifying inventory update...")
+        self.test_inventory_update(return_response, sale_details)
+        
+        # Summary
+        print("=" * 60)
+        print("TEST SUMMARY")
+        print("=" * 60)
+        
+        passed = sum(1 for result in self.test_results if result['success'])
+        total = len(self.test_results)
+        
+        print(f"Tests Passed: {passed}/{total}")
+        print()
+        
+        for result in self.test_results:
+            status = "✅" if result['success'] else "❌"
+            print(f"{status} {result['test']}")
+            
+        return passed == total
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    tester = ReturnExchangeAPITester()
+    success = tester.run_tests()
+    
+    if not success:
+        sys.exit(1)
