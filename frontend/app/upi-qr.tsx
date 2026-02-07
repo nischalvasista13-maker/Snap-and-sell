@@ -118,7 +118,11 @@ export default function UpiQr() {
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollContent} 
+        contentContainerStyle={styles.scrollContentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Amount Card */}
         <View style={styles.amountCard}>
           <Text style={styles.amountLabel}>Amount to Pay</Text>
@@ -133,7 +137,7 @@ export default function UpiQr() {
               <View style={styles.qrWrapper}>
                 <QRCode
                   value={generateUpiString()}
-                  size={250}
+                  size={200}
                   backgroundColor="#FFF"
                   color="#1A1A1A"
                 />
@@ -161,7 +165,10 @@ export default function UpiQr() {
           </View>
           <Text style={styles.waitingText}>Waiting for customer to complete payment</Text>
         </View>
-      </View>
+        
+        {/* Bottom spacing */}
+        <View style={{ height: 20 }} />
+      </ScrollView>
 
       {/* Footer Button */}
       <View style={styles.footer}>
