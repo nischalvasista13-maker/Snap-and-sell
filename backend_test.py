@@ -126,12 +126,13 @@ class ReturnExchangeAPITester:
             
             if response.status_code == 200:
                 return_response = response.json()
-                # Verify return was created
-                if 'id' in return_response:
+                # Verify return was created (check for _id or id)
+                return_id = return_response.get('_id') or return_response.get('id')
+                if return_id:
                     self.log_result(
                         "POST /api/returns",
                         True,
-                        f"Return created successfully. Return ID: {return_response['id']}, Amount: ${return_data['returnTotal']}"
+                        f"Return created successfully. Return ID: {return_id}, Amount: ${return_data['returnTotal']}"
                     )
                     return return_response
                 else:
