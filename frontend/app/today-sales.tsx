@@ -639,6 +639,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  saleHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   timeText: {
     fontSize: 12,
     color: '#666',
