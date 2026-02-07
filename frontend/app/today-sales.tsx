@@ -431,7 +431,6 @@ export default function TodaySales() {
         {/* Bottom padding for scroll */}
         <View style={{ height: 20 }} />
       </ScrollView>
-        </>
       )}
 
       {/* Filter Modal */}
