@@ -611,6 +611,13 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
+  transactionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginTop: 20,
+    marginBottom: 12,
+  },
   saleCard: {
     backgroundColor: '#FFF',
     borderRadius: 12,
