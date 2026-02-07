@@ -365,14 +365,25 @@ export default function TodaySales() {
         }
       >
         {sales.map((sale, index) => (
-          <View key={sale._id} style={styles.saleCard}>
+          <TouchableOpacity 
+            key={sale._id} 
+            style={styles.saleCard}
+            onPress={() => router.push({
+              pathname: '/sale-details',
+              params: { saleId: sale._id }
+            })}
+            activeOpacity={0.7}
+          >
             <View style={styles.saleHeader}>
               <View style={styles.saleNumber}>
                 <Text style={styles.saleNumberText}>#{sales.length - index}</Text>
               </View>
-              <View style={styles.saleTime}>
-                <Ionicons name="time-outline" size={16} color="#666" />
-                <Text style={styles.timeText}>{formatTime(sale.timestamp)}</Text>
+              <View style={styles.saleHeaderRight}>
+                <View style={styles.saleTime}>
+                  <Ionicons name="time-outline" size={16} color="#666" />
+                  <Text style={styles.timeText}>{formatTime(sale.timestamp)}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#CCC" />
               </View>
             </View>
 
@@ -408,7 +419,7 @@ export default function TodaySales() {
               </View>
               <Text style={styles.saleTotal}>₹{sale.total.toFixed(2)}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
         
         {/* Bottom padding for scroll */}
