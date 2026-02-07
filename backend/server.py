@@ -145,6 +145,38 @@ class SaleResponse(BaseModel):
     class Config:
         populate_by_name = True
 
+# Return Models
+class ReturnItem(BaseModel):
+    productId: str
+    productName: str
+    quantity: int
+    price: float
+    size: Optional[str] = ""
+
+class Return(BaseModel):
+    originalSaleId: str
+    items: List[ReturnItem]
+    returnTotal: float
+    reason: Optional[str] = ""
+    type: str  # "return" or "exchange"
+    exchangeSaleId: Optional[str] = None  # Links to new sale if exchange
+    timestamp: Optional[datetime] = None
+    date: Optional[str] = None
+
+class ReturnResponse(BaseModel):
+    id: str = Field(alias="_id")
+    originalSaleId: str
+    items: List[ReturnItem]
+    returnTotal: float
+    reason: Optional[str] = ""
+    type: str
+    exchangeSaleId: Optional[str] = None
+    timestamp: datetime
+    date: str
+
+    class Config:
+        populate_by_name = True
+
 # ===== AUTH HELPER FUNCTIONS =====
 
 def hash_password(password: str) -> str:
