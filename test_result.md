@@ -369,8 +369,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Payment Summary API"
-    - "Today's Sales Report"
+    - "Return and Exchange API - Complete Testing"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -384,3 +383,5 @@ agent_communication:
     message: "Implemented payment-wise summary feature. Backend endpoint /api/sales/summary is ready for testing. Frontend today-sales.tsx updated to show Cash, UPI, Card, Credit breakdowns with empty state handling."
   - agent: "testing"
     message: "✅ PAYMENT SUMMARY API TESTING COMPLETE: All 4 test cases passed perfectly. Verified response structure (totalSales, cashTotal, upiTotal, cardTotal, creditTotal, otherTotal, totalTransactions, breakdown), date range filtering, empty range handling, and parameter validation. API processes $1288.96 across 5 transactions with accurate payment method breakdown. Ready for production."
+  - agent: "testing"
+    message: "✅ RETURN AND EXCHANGE API TESTING COMPLETE: All 5 endpoints tested successfully. GET /api/sales/{sale_id} retrieves sale details correctly. POST /api/returns creates returns with proper inventory updates. GET /api/returns lists all returns. GET /api/returns/by-sale/{sale_id} filters returns by sale. Inventory update verification confirmed stock increases correctly when items are returned. All return and exchange functionality working perfectly."
