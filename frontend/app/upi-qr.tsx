@@ -219,8 +219,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFF',
   },
-  content: {
+  scrollContent: {
     flex: 1,
+  },
+  scrollContentContainer: {
     padding: 20,
     alignItems: 'center',
   },
