@@ -421,10 +421,12 @@ export default function TodaySales() {
           </View>
 
           {/* Section Title for Transactions */}
-          <Text style={styles.transactionsTitle}>Transactions</Text>
+          <Text style={styles.transactionsTitle}>
+            Transactions {searchQuery && `(${filteredSales.length})`}
+          </Text>
 
           {/* Sales List */}
-          {sales.map((sale, index) => (
+          {filteredSales.map((sale, index) => (
             <TouchableOpacity 
               key={sale._id} 
               style={styles.saleCard}
@@ -436,7 +438,7 @@ export default function TodaySales() {
             >
               <View style={styles.saleHeader}>
                 <View style={styles.saleNumber}>
-                  <Text style={styles.saleNumberText}>#{sales.length - index}</Text>
+                  <Text style={styles.saleNumberText}>#{filteredSales.length - index}</Text>
                 </View>
               <View style={styles.saleHeaderRight}>
                 <View style={styles.saleTime}>
