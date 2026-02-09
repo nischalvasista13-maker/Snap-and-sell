@@ -235,7 +235,15 @@ export default function ReturnScreen() {
           <View key={index} style={styles.itemCard}>
             <View style={styles.itemInfo}>
               <Text style={styles.itemName}>{item.productName}</Text>
-              <Text style={styles.itemPrice}>₹{item.price.toFixed(2)} each</Text>
+              {/* Show discounted price if different from original */}
+              {item.finalPaidPrice < item.price ? (
+                <View style={styles.priceRow}>
+                  <Text style={styles.originalPrice}>₹{item.price.toFixed(2)}</Text>
+                  <Text style={styles.discountedPrice}>₹{item.finalPaidPrice.toFixed(2)} each</Text>
+                </View>
+              ) : (
+                <Text style={styles.itemPrice}>₹{item.price.toFixed(2)} each</Text>
+              )}
               <Text style={styles.availableText}>
                 Available to return: {item.maxQuantity}
               </Text>
