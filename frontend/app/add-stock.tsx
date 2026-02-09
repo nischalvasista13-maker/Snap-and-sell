@@ -302,6 +302,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  galleryAltButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 24,
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#F0F7FF',
+    borderRadius: 12,
+  },
+  galleryAltText: {
+    color: '#007AFF',
+    fontSize: 15,
+    fontWeight: '500',
+  },
   backButton: {
     marginTop: 16,
     paddingVertical: 12,
