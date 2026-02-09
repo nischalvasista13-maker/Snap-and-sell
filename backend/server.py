@@ -124,21 +124,26 @@ class SaleItem(BaseModel):
     productId: str
     productName: str
     quantity: int
-    price: float
+    price: float  # Original unit price
     image: str
     size: Optional[str] = ""
+    # Per-item discount tracking
+    itemTotal: Optional[float] = None  # price * quantity (original)
+    discountAmount: Optional[float] = 0  # Discount applied to this item
+    finalPaidAmount: Optional[float] = None  # itemTotal - discountAmount (what customer actually paid)
 
 class Sale(BaseModel):
     items: List[SaleItem]
-    total: float
+    total: float  # Final paid amount (after discount)
     paymentMethod: str
     timestamp: Optional[datetime] = None
     date: Optional[str] = None
-    # New fields for discount
-    originalTotal: Optional[float] = None
-    discount: Optional[float] = 0
+    # Discount details
+    originalTotal: Optional[float] = None  # Sum of all items before discount
     discountType: Optional[str] = None  # "percentage" or "flat"
-    # New field for WhatsApp
+    discountValue: Optional[float] = 0  # The value entered (e.g., 10 for 10% or ₹10)
+    discountAmount: Optional[float] = 0  # Actual discount amount in rupees
+    # WhatsApp
     customerPhone: Optional[str] = None
 
 class SaleResponse(BaseModel):
@@ -149,8 +154,9 @@ class SaleResponse(BaseModel):
     timestamp: datetime
     date: str
     originalTotal: Optional[float] = None
-    discount: Optional[float] = 0
     discountType: Optional[str] = None
+    discountValue: Optional[float] = 0
+    discountAmount: Optional[float] = 0
     customerPhone: Optional[str] = None
 
     class Config:
@@ -161,8 +167,9 @@ class ReturnItem(BaseModel):
     productId: str
     productName: str
     quantity: int
-    price: float
+    price: float  # Original unit price
     size: Optional[str] = ""
+    finalPaidPrice: Optional[float] = None  # Discounted unit price (for refund calculation)
 
 class Return(BaseModel):
     originalSaleId: str
