@@ -4,12 +4,56 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function AddStock() {
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraRef, setCameraRef] = useState<any>(null);
   const [capturing, setCapturing] = useState(false);
+
+  const processAndNavigate = async (uri: string) => {
+    try {
+      // Compress and resize image
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 800 } }], // Resize to max width 800px
+        { 
+          compress: 0.6, 
+          format: ImageManipulator.SaveFormat.JPEG,
+          base64: true 
+        }
+      );
+      
+      // Navigate to item details with compressed image
+      router.push({
+        pathname: '/item-details',
+        params: { imageData: `data:image/jpeg;base64,${manipulatedImage.base64}` }
+      });
+    } catch (error) {
+      console.error('Error processing image:', error);
+      Alert.alert('Error', 'Failed to process image');
+      setCapturing(false);
+    }
+  };
+
+  const pickFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await processAndNavigate(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image from gallery');
+    }
+  };
 
   if (!permission) {
     return (
@@ -29,6 +73,13 @@ export default function AddStock() {
           <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
             <Text style={styles.permissionButtonText}>Grant Permission</Text>
           </TouchableOpacity>
+          
+          {/* Gallery option even without camera permission */}
+          <TouchableOpacity style={styles.galleryAltButton} onPress={pickFromGallery}>
+            <Ionicons name="images" size={20} color="#007AFF" />
+            <Text style={styles.galleryAltText}>Or pick from Gallery</Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
@@ -43,25 +94,10 @@ export default function AddStock() {
       try {
         const photo = await cameraRef.takePictureAsync({
           quality: 0.5,
-          base64: false, // Don't get base64 initially
+          base64: false,
         });
         
-        // Compress and resize image
-        const manipulatedImage = await ImageManipulator.manipulateAsync(
-          photo.uri,
-          [{ resize: { width: 800 } }], // Resize to max width 800px
-          { 
-            compress: 0.6, 
-            format: ImageManipulator.SaveFormat.JPEG,
-            base64: true 
-          }
-        );
-        
-        // Navigate to item details with compressed image
-        router.push({
-          pathname: '/item-details',
-          params: { imageData: `data:image/jpeg;base64,${manipulatedImage.base64}` }
-        });
+        await processAndNavigate(photo.uri);
       } catch (error) {
         console.error('Error taking picture:', error);
         Alert.alert('Error', 'Failed to capture image');
