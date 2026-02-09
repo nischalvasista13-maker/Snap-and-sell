@@ -80,7 +80,8 @@ export default function Payment() {
         pathname: '/upi-qr',
         params: {
           total: getFinalTotal().toString(),
-          cartJson: JSON.stringify(cart)
+          cartJson: JSON.stringify(cart),
+          checkoutDataJson: JSON.stringify(checkoutData)
         }
       });
       return;
@@ -93,8 +94,9 @@ export default function Payment() {
         items: cart,
         total: getFinalTotal(),
         originalTotal: checkoutData?.originalTotal || getFinalTotal(),
-        discount: checkoutData?.discount || 0,
+        discountAmount: checkoutData?.discountAmount || 0,  // Actual discount in rupees
         discountType: checkoutData?.discountType || null,
+        discountValue: checkoutData?.discountValue || 0,
         paymentMethod: selectedMethod,
         customerPhone: checkoutData?.customerPhone || null
       };
