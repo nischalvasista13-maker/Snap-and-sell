@@ -109,7 +109,8 @@ export default function ReturnScreen() {
   };
 
   const calculateReturnTotal = () => {
-    return returnItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Use finalPaidPrice (discounted) for refund calculation
+    return returnItems.reduce((sum, item) => sum + (item.finalPaidPrice * item.quantity), 0);
   };
 
   const hasSelectedItems = () => {
@@ -147,9 +148,10 @@ export default function ReturnScreen() {
             productId: item.productId,
             productName: item.productName,
             quantity: item.quantity,
-            price: item.price
+            price: item.price,  // Original price (for reference)
+            finalPaidPrice: item.finalPaidPrice  // Discounted price (for refund)
           })),
-        returnTotal: calculateReturnTotal(),
+        returnTotal: calculateReturnTotal(),  // Based on discounted prices
         reason: reason || 'Customer return',
         type: 'return'
       };
