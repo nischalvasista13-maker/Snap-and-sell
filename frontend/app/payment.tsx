@@ -266,6 +266,21 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     marginTop: 8,
   },
+  discountApplied: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 12,
+    gap: 6,
+  },
+  discountAppliedText: {
+    fontSize: 14,
+    color: '#FFF',
+    fontWeight: '500',
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
