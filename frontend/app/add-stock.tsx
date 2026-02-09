@@ -133,8 +133,18 @@ export default function AddStock() {
           <Text style={styles.guideText}>Position product within frame</Text>
         </View>
 
-        {/* Capture Button */}
+        {/* Capture Button & Gallery Button */}
         <View style={styles.controls}>
+          {/* Gallery Button */}
+          <TouchableOpacity 
+            style={styles.galleryButton}
+            onPress={pickFromGallery}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="images" size={28} color="#FFF" />
+          </TouchableOpacity>
+
+          {/* Capture Button */}
           <TouchableOpacity 
             style={styles.captureButton}
             onPress={takePicture}
@@ -147,6 +157,9 @@ export default function AddStock() {
               <View style={styles.captureButtonInner} />
             )}
           </TouchableOpacity>
+
+          {/* Placeholder for symmetry */}
+          <View style={styles.galleryButton} />
         </View>
       </CameraView>
     </View>
