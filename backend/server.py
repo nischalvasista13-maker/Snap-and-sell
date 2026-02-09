@@ -126,6 +126,7 @@ class SaleItem(BaseModel):
     quantity: int
     price: float
     image: str
+    size: Optional[str] = ""
 
 class Sale(BaseModel):
     items: List[SaleItem]
@@ -133,6 +134,12 @@ class Sale(BaseModel):
     paymentMethod: str
     timestamp: Optional[datetime] = None
     date: Optional[str] = None
+    # New fields for discount
+    originalTotal: Optional[float] = None
+    discount: Optional[float] = 0
+    discountType: Optional[str] = None  # "percentage" or "flat"
+    # New field for WhatsApp
+    customerPhone: Optional[str] = None
 
 class SaleResponse(BaseModel):
     id: str = Field(alias="_id")
@@ -141,6 +148,10 @@ class SaleResponse(BaseModel):
     paymentMethod: str
     timestamp: datetime
     date: str
+    originalTotal: Optional[float] = None
+    discount: Optional[float] = 0
+    discountType: Optional[str] = None
+    customerPhone: Optional[str] = None
 
     class Config:
         populate_by_name = True
