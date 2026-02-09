@@ -124,10 +124,6 @@ export default function Payment() {
       setProcessing(false);
     }
   };
-      Alert.alert('Error', 'Failed to process sale. Please try again.');
-      setProcessing(false);
-    }
-  };
 
   const paymentMethods = [
     { id: 'cash', name: 'Cash', icon: 'cash' },
