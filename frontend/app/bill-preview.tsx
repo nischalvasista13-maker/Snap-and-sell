@@ -97,9 +97,9 @@ export default function BillPreview() {
     const checkoutData = {
       cart,
       originalTotal: calculateSubtotal(),
-      discount: calculateDiscount(),
+      discountAmount: calculateDiscount(),  // Actual discount in rupees
       discountType: discountType,
-      discountValue: discountValue ? parseFloat(discountValue) : 0,
+      discountValue: discountValue ? parseFloat(discountValue) : 0,  // The value entered (e.g., 10 for 10%)
       finalTotal: calculateTotal(),
       customerPhone: customerPhone.trim() || null
     };
