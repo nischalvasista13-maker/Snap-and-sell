@@ -12,6 +12,10 @@ interface SaleItem {
   quantity: number;
   price: number;
   image: string;
+  // Discount tracking
+  itemTotal?: number;
+  discountAmount?: number;
+  finalPaidAmount?: number;
 }
 
 interface Product {
@@ -26,7 +30,8 @@ interface ReturnItem {
   productId: string;
   productName: string;
   quantity: number;
-  price: number;
+  price: number;  // Original unit price
+  finalPaidPrice: number;  // Discounted unit price (for refund)
   maxQuantity: number;
 }
 
@@ -71,8 +76,23 @@ export default function ExchangeScreen() {
         });
       });
       
-      // Initialize return items
-      const items: ReturnItem[] = saleData.items.map((item: SaleItem) => ({
+      // Initialize return items with discounted prices
+      const items: ReturnItem[] = saleData.items.map((item: SaleItem) => {
+        const remainingQty = item.quantity - (returnedQuantities[item.productId] || 0);
+        // Calculate per-unit final paid price
+        const finalPaidPrice = item.finalPaidAmount 
+          ? item.finalPaidAmount / item.quantity 
+          : item.price;  // Fallback to original price if no discount
+        
+        return {
+          productId: item.productId,
+          productName: item.productName,
+          quantity: 0,
+          price: item.price,  // Original price (for display)
+          finalPaidPrice: finalPaidPrice,  // Discounted price (for exchange calculation)
+          maxQuantity: remainingQty
+        };
+      }).filter((item: ReturnItem) => item.maxQuantity > 0);
         productId: item.productId,
         productName: item.productName,
         quantity: 0,
