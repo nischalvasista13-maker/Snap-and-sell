@@ -419,6 +419,22 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 8,
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
+  discountedPrice: {
+    fontSize: 13,
+    color: '#34C759',
+    fontWeight: '500',
+  },
   availableText: {
     fontSize: 12,
     color: '#999',
