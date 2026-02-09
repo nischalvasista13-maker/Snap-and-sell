@@ -1,13 +1,47 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Linking, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function Success() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const total = params.total as string;
   const method = params.method as string;
+  const saleId = params.saleId as string;
+  const customerPhone = params.customerPhone as string;
+  const discount = parseFloat(params.discount as string) || 0;
+  const originalTotal = parseFloat(params.originalTotal as string) || parseFloat(total);
+  
+  const [shopName, setShopName] = useState('Your Store');
+  const [saleItems, setSaleItems] = useState<Array<{productName: string; quantity: number; price: number}>>([]);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      // Load shop name
+      const settingsRes = await axios.get(`${API_URL}/api/settings`);
+      if (settingsRes.data?.shopName) {
+        setShopName(settingsRes.data.shopName);
+      }
+      
+      // Load sale details if we have saleId
+      if (saleId) {
+        const saleRes = await axios.get(`${API_URL}/api/sales/${saleId}`);
+        if (saleRes.data?.items) {
+          setSaleItems(saleRes.data.items);
+        }
+      }
+    } catch (error) {
+      console.log('Error loading data:', error);
+    }
+  };
 
   const goHome = () => {
     router.replace('/home');
@@ -15,6 +49,72 @@ export default function Success() {
 
   const viewSales = () => {
     router.replace('/today-sales');
+  };
+
+  const generateBillText = () => {
+    const date = new Date().toLocaleDateString('en-IN', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    let bill = `🧾 *${shopName}*\n`;
+    bill += `━━━━━━━━━━━━━━━\n`;
+    bill += `📅 ${date}\n`;
+    if (saleId) {
+      bill += `🔖 Order: #${saleId.slice(-6).toUpperCase()}\n`;
+    }
+    bill += `━━━━━━━━━━━━━━━\n\n`;
+    
+    bill += `*Items:*\n`;
+    if (saleItems.length > 0) {
+      saleItems.forEach(item => {
+        bill += `• ${item.productName} x${item.quantity}\n`;
+        bill += `   ₹${(item.price * item.quantity).toFixed(2)}\n`;
+      });
+    } else {
+      bill += `(Items details in receipt)\n`;
+    }
+    
+    bill += `\n━━━━━━━━━━━━━━━\n`;
+    
+    if (discount > 0) {
+      bill += `Subtotal: ₹${originalTotal.toFixed(2)}\n`;
+      bill += `Discount: -₹${discount.toFixed(2)}\n`;
+      bill += `━━━━━━━━━━━━━━━\n`;
+    }
+    
+    bill += `*TOTAL: ₹${Number(total).toFixed(2)}*\n`;
+    bill += `Payment: ${method?.toUpperCase()}\n`;
+    bill += `━━━━━━━━━━━━━━━\n\n`;
+    bill += `Thank you for shopping! 🙏`;
+    
+    return bill;
+  };
+
+  const sendWhatsAppBill = async () => {
+    if (!customerPhone) {
+      Alert.alert('No Phone Number', 'Customer WhatsApp number was not provided');
+      return;
+    }
+
+    const billText = generateBillText();
+    const encodedMessage = encodeURIComponent(billText);
+    const whatsappUrl = `https://wa.me/${customerPhone}?text=${encodedMessage}`;
+    
+    try {
+      const canOpen = await Linking.canOpenURL(whatsappUrl);
+      if (canOpen) {
+        await Linking.openURL(whatsappUrl);
+      } else {
+        Alert.alert('Error', 'WhatsApp is not installed on this device');
+      }
+    } catch (error) {
+      console.error('Error opening WhatsApp:', error);
+      Alert.alert('Error', 'Failed to open WhatsApp');
+    }
   };
 
   return (
@@ -28,6 +128,30 @@ export default function Success() {
         <Text style={styles.subtitle}>Transaction successful</Text>
 
         <View style={styles.detailsCard}>
+          {saleId && (
+            <>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Order ID</Text>
+                <Text style={styles.orderId}>#{saleId.slice(-6).toUpperCase()}</Text>
+              </View>
+              <View style={styles.divider} />
+            </>
+          )}
+          
+          {discount > 0 && (
+            <>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Subtotal</Text>
+                <Text style={styles.detailValue}>₹{originalTotal.toFixed(2)}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Discount</Text>
+                <Text style={styles.discountValue}>-₹{discount.toFixed(2)}</Text>
+              </View>
+              <View style={styles.divider} />
+            </>
+          )}
+          
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Amount Paid</Text>
             <Text style={styles.detailValue}>₹{Number(total).toFixed(2)}</Text>
@@ -40,6 +164,18 @@ export default function Success() {
             <Text style={styles.detailValue}>{method?.toUpperCase()}</Text>
           </View>
         </View>
+
+        {/* WhatsApp Button */}
+        {customerPhone && (
+          <TouchableOpacity 
+            style={styles.whatsappButton}
+            onPress={sendWhatsAppBill}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="logo-whatsapp" size={22} color="#FFF" />
+            <Text style={styles.whatsappButtonText}>Send Bill on WhatsApp</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity 
@@ -80,22 +216,21 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#1A1A1A',
-    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 40,
+    marginTop: 8,
+    marginBottom: 32,
   },
   detailsCard: {
-    width: '100%',
     backgroundColor: '#FFF',
     borderRadius: 16,
     padding: 24,
-    marginBottom: 40,
+    width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -106,32 +241,65 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 8,
   },
   detailLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
   },
   detailValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#1A1A1A',
+  },
+  orderId: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  discountValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#34C759',
   },
   divider: {
     height: 1,
     backgroundColor: '#EEE',
-    marginVertical: 16,
+    marginVertical: 8,
+  },
+  whatsappButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#25D366',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 24,
+    width: '100%',
+    gap: 10,
+  },
+  whatsappButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   buttonContainer: {
     width: '100%',
+    marginTop: 24,
     gap: 12,
   },
   primaryButton: {
-    flexDirection: 'row',
     backgroundColor: '#007AFF',
-    padding: 18,
-    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
     gap: 8,
   },
   primaryButtonText: {
@@ -140,14 +308,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   secondaryButton: {
-    flexDirection: 'row',
     backgroundColor: '#FFF',
-    padding: 18,
-    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
     gap: 8,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#007AFF',
   },
   secondaryButtonText: {
