@@ -93,12 +93,6 @@ export default function ExchangeScreen() {
           maxQuantity: remainingQty
         };
       }).filter((item: ReturnItem) => item.maxQuantity > 0);
-        productId: item.productId,
-        productName: item.productName,
-        quantity: 0,
-        price: item.price,
-        maxQuantity: item.quantity - (returnedQuantities[item.productId] || 0)
-      })).filter((item: ReturnItem) => item.maxQuantity > 0);
       
       setReturnItems(items);
       setProducts(productsRes.data.filter((p: Product) => p.stock > 0));
