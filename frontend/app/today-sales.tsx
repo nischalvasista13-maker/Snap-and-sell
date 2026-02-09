@@ -167,6 +167,25 @@ export default function TodaySales() {
     loadSalesAndSummary();
   };
 
+  // Filter sales based on search query
+  const filteredSales = useMemo(() => {
+    if (!searchQuery.trim()) return sales;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return sales.filter(sale => {
+      // Search by Sale ID
+      if (sale._id.toLowerCase().includes(query)) return true;
+      
+      // Search by product name
+      const hasMatchingProduct = sale.items.some(item => 
+        item.productName.toLowerCase().includes(query)
+      );
+      if (hasMatchingProduct) return true;
+      
+      return false;
+    });
+  }, [sales, searchQuery]);
+
   // Check if there are no sales in the period
   const hasNoSales = () => {
     if (!paymentSummary) return sales.length === 0;
