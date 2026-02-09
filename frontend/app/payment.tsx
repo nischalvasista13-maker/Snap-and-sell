@@ -151,8 +151,16 @@ export default function Payment() {
         {/* Amount Summary */}
         <View style={styles.summaryCard}>
           <Text style={styles.summaryLabel}>Total Amount</Text>
-          <Text style={styles.summaryAmount}>₹{calculateTotal().toFixed(2)}</Text>
+          <Text style={styles.summaryAmount}>₹{getFinalTotal().toFixed(2)}</Text>
           <Text style={styles.summaryItems}>{cart.length} item(s)</Text>
+          {checkoutData && checkoutData.discount > 0 && (
+            <View style={styles.discountApplied}>
+              <Ionicons name="pricetag" size={14} color="#34C759" />
+              <Text style={styles.discountAppliedText}>
+                Discount: -₹{checkoutData.discount.toFixed(2)}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Payment Methods */}
