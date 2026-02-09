@@ -12,6 +12,10 @@ interface SaleItem {
   quantity: number;
   price: number;
   image: string;
+  // Discount tracking
+  itemTotal?: number;
+  discountAmount?: number;
+  finalPaidAmount?: number;
 }
 
 interface Sale {
@@ -20,13 +24,15 @@ interface Sale {
   total: number;
   paymentMethod: string;
   timestamp: string;
+  discountAmount?: number;
 }
 
 interface ReturnItem {
   productId: string;
   productName: string;
   quantity: number;
-  price: number;
+  price: number;  // Original unit price
+  finalPaidPrice: number;  // Discounted unit price (for refund)
   maxQuantity: number;
 }
 
@@ -62,13 +68,23 @@ export default function ReturnScreen() {
       });
       
       // Initialize return items with available quantities
-      const items: ReturnItem[] = saleData.items.map((item: SaleItem) => ({
-        productId: item.productId,
-        productName: item.productName,
-        quantity: 0,
-        price: item.price,
-        maxQuantity: item.quantity - (returnedQuantities[item.productId] || 0)
-      })).filter((item: ReturnItem) => item.maxQuantity > 0);
+      // Use finalPaidAmount for refund calculation (respects discount)
+      const items: ReturnItem[] = saleData.items.map((item: SaleItem) => {
+        const remainingQty = item.quantity - (returnedQuantities[item.productId] || 0);
+        // Calculate per-unit final paid price
+        const finalPaidPrice = item.finalPaidAmount 
+          ? item.finalPaidAmount / item.quantity 
+          : item.price;  // Fallback to original price if no discount
+        
+        return {
+          productId: item.productId,
+          productName: item.productName,
+          quantity: 0,
+          price: item.price,  // Original price (for display)
+          finalPaidPrice: finalPaidPrice,  // Discounted price (for refund)
+          maxQuantity: remainingQty
+        };
+      }).filter((item: ReturnItem) => item.maxQuantity > 0);
       
       setSale(saleData);
       setReturnItems(items);
