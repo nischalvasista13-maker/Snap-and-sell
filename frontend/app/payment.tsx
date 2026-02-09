@@ -13,27 +13,59 @@ interface CartItem {
   quantity: number;
   price: number;
   image: string;
+  size?: string;
+}
+
+interface CheckoutData {
+  cart: CartItem[];
+  originalTotal: number;
+  discount: number;
+  discountType: string | null;
+  discountValue: number;
+  finalTotal: number;
+  customerPhone: string | null;
 }
 
 export default function Payment() {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
   const [selectedMethod, setSelectedMethod] = useState('');
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    loadCart();
+    loadCheckoutData();
   }, []);
 
-  const loadCart = async () => {
-    const cartJson = await AsyncStorage.getItem('cart');
-    if (cartJson) {
-      setCart(JSON.parse(cartJson));
+  const loadCheckoutData = async () => {
+    // First try to load checkout data (with discount info)
+    const checkoutJson = await AsyncStorage.getItem('checkoutData');
+    if (checkoutJson) {
+      const data = JSON.parse(checkoutJson);
+      setCheckoutData(data);
+      setCart(data.cart);
+    } else {
+      // Fallback to cart only
+      const cartJson = await AsyncStorage.getItem('cart');
+      if (cartJson) {
+        const cartData = JSON.parse(cartJson);
+        setCart(cartData);
+        const total = cartData.reduce((sum: number, item: CartItem) => sum + (item.price * item.quantity), 0);
+        setCheckoutData({
+          cart: cartData,
+          originalTotal: total,
+          discount: 0,
+          discountType: null,
+          discountValue: 0,
+          finalTotal: total,
+          customerPhone: null
+        });
+      }
     }
   };
 
-  const calculateTotal = () => {
-    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const getFinalTotal = () => {
+    return checkoutData?.finalTotal || cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
   const processSale = async () => {
@@ -47,7 +79,7 @@ export default function Payment() {
       router.push({
         pathname: '/upi-qr',
         params: {
-          total: calculateTotal().toString(),
+          total: getFinalTotal().toString(),
           cartJson: JSON.stringify(cart)
         }
       });
@@ -59,25 +91,39 @@ export default function Payment() {
     try {
       const saleData = {
         items: cart,
-        total: calculateTotal(),
-        paymentMethod: selectedMethod
+        total: getFinalTotal(),
+        originalTotal: checkoutData?.originalTotal || getFinalTotal(),
+        discount: checkoutData?.discount || 0,
+        discountType: checkoutData?.discountType || null,
+        paymentMethod: selectedMethod,
+        customerPhone: checkoutData?.customerPhone || null
       };
 
-      await axios.post(`${BACKEND_URL}/api/sales`, saleData);
+      const response = await axios.post(`${BACKEND_URL}/api/sales`, saleData);
+      const saleId = response.data._id || response.data.id;
       
-      // Clear cart
+      // Clear cart and checkout data
       await AsyncStorage.removeItem('cart');
+      await AsyncStorage.removeItem('checkoutData');
       
-      // Navigate to success
+      // Navigate to success with all data for WhatsApp
       router.replace({
         pathname: '/success',
         params: { 
-          total: calculateTotal().toString(),
-          method: selectedMethod
+          total: getFinalTotal().toString(),
+          method: selectedMethod,
+          saleId: saleId,
+          customerPhone: checkoutData?.customerPhone || '',
+          discount: (checkoutData?.discount || 0).toString(),
+          originalTotal: (checkoutData?.originalTotal || getFinalTotal()).toString()
         }
       });
     } catch (error) {
       console.error('Error processing sale:', error);
+      Alert.alert('Error', 'Failed to process sale. Please try again.');
+      setProcessing(false);
+    }
+  };
       Alert.alert('Error', 'Failed to process sale. Please try again.');
       setProcessing(false);
     }
