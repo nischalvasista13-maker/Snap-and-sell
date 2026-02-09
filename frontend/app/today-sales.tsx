@@ -266,10 +266,35 @@ export default function TodaySales() {
           <Ionicons name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Sales</Text>
-        <TouchableOpacity onPress={() => setShowFilterModal(true)}>
-          <Ionicons name="filter" size={24} color="#FFF" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => setShowSearch(!showSearch)} style={styles.headerButton}>
+            <Ionicons name={showSearch ? "close" : "search"} size={22} color="#FFF" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowFilterModal(true)} style={styles.headerButton}>
+            <Ionicons name="filter" size={22} color="#FFF" />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Search Bar */}
+      {showSearch && (
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by product name or Sale ID..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* Current Filter Display */}
       <TouchableOpacity style={styles.filterBar} onPress={() => setShowFilterModal(true)}>
@@ -280,8 +305,17 @@ export default function TodaySales() {
         <Ionicons name="chevron-down" size={16} color="#666" />
       </TouchableOpacity>
 
+      {/* Search Results Info */}
+      {searchQuery.trim() && (
+        <View style={styles.searchResultsInfo}>
+          <Text style={styles.searchResultsText}>
+            Found {filteredSales.length} result{filteredSales.length !== 1 ? 's' : ''} for "{searchQuery}"
+          </Text>
+        </View>
+      )}
+
       {/* Empty State - No Sales in Period */}
-      {hasNoSales() ? (
+      {hasNoSales() && !searchQuery ? (
         <View style={styles.emptyStateContainer}>
           <Ionicons name="receipt-outline" size={80} color="#CCC" />
           <Text style={styles.emptyStateTitle}>No sales in the selected period</Text>
