@@ -117,7 +117,8 @@ export default function ExchangeScreen() {
   };
 
   const calculateReturnTotal = () => {
-    return returnItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Use finalPaidPrice (discounted) for exchange credit calculation
+    return returnItems.reduce((sum, item) => sum + (item.finalPaidPrice * item.quantity), 0);
   };
 
   const calculateNewTotal = () => {
