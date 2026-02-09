@@ -409,6 +409,29 @@ async def create_sale(sale: Sale):
     sale_dict['timestamp'] = datetime.utcnow()
     sale_dict['date'] = datetime.utcnow().strftime('%Y-%m-%d')
     
+    # Calculate per-item discount distribution
+    items = sale_dict['items']
+    original_total = sum(item['price'] * item['quantity'] for item in items)
+    discount_amount = sale_dict.get('discountAmount', 0) or 0
+    
+    # Store originalTotal if not provided
+    if not sale_dict.get('originalTotal'):
+        sale_dict['originalTotal'] = original_total
+    
+    # Distribute discount proportionally across items
+    for item in items:
+        item_total = item['price'] * item['quantity']
+        item['itemTotal'] = item_total
+        
+        if original_total > 0 and discount_amount > 0:
+            # Proportional discount: (item_total / original_total) * total_discount
+            item_discount = (item_total / original_total) * discount_amount
+            item['discountAmount'] = round(item_discount, 2)
+            item['finalPaidAmount'] = round(item_total - item_discount, 2)
+        else:
+            item['discountAmount'] = 0
+            item['finalPaidAmount'] = item_total
+    
     # Update stock for all items using bulk_write (optimized)
     from pymongo import UpdateOne
     bulk_operations = [
