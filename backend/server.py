@@ -717,6 +717,19 @@ async def create_exchange(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# Static file endpoint for app icon
+@api_router.get("/download/app-icon")
+async def download_app_icon():
+    """Download the 512x512 app icon"""
+    icon_path = ROOT_DIR / "app_icon_512x512.png"
+    if not icon_path.exists():
+        raise HTTPException(status_code=404, detail="App icon not found")
+    return FileResponse(
+        path=str(icon_path),
+        filename="salemate_app_icon_512x512.png",
+        media_type="image/png"
+    )
+
 # Include the router in the main app
 app.include_router(api_router)
 
