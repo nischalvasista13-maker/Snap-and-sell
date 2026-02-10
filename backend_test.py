@@ -10,7 +10,7 @@ from datetime import datetime
 import sys
 
 # Backend URL from environment
-BACKEND_URL = "https://retail-checkout-demo.preview.emergentagent.com"
+BACKEND_URL = "https://pos-retail-app.preview.emergentagent.com"
 
 class ReturnExchangeAPITester:
     def __init__(self):
