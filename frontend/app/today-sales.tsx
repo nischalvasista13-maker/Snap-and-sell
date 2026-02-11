@@ -302,6 +302,12 @@ export default function TodaySales() {
           <Text style={styles.emptyStateSubtext}>
             Try selecting a different date range or make some sales
           </Text>
+          <View style={styles.emptyStateHint}>
+            <Ionicons name="information-circle-outline" size={18} color="#007AFF" />
+            <Text style={styles.emptyStateHintText}>
+              Looking to process a return or exchange? Use the search above to find the sale.
+            </Text>
+          </View>
           <TouchableOpacity 
             style={styles.refreshButton} 
             onPress={() => loadSalesAndSummary()}
