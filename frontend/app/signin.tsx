@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -22,13 +22,27 @@ export default function SignIn() {
 
     setLoading(true);
     try {
+      // Clear any previous session data before storing new session
+      await AsyncStorage.multiRemove([
+        'authToken', 
+        'lastActiveTime', 
+        'setupCompleted', 
+        'cart',
+        'userId',
+        'businessId',
+        'username'
+      ]);
+
       const response = await axios.post(`${BACKEND_URL}/api/auth/signin`, {
         username: username.trim(),
         password: password
       });
 
-      // Store auth token and set last active time
+      // Store auth token and user data
       await AsyncStorage.setItem('authToken', response.data.access_token);
+      await AsyncStorage.setItem('userId', response.data.userId);
+      await AsyncStorage.setItem('businessId', response.data.businessId);
+      await AsyncStorage.setItem('username', response.data.username);
       await AsyncStorage.setItem('lastActiveTime', Date.now().toString());
 
       // Navigate to main app
@@ -50,77 +64,93 @@ export default function SignIn() {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Ionicons name="storefront" size={80} color="#007AFF" />
-          <Text style={styles.title}>POS System</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
-        </View>
-
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Username</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter username"
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Ionicons name="storefront" size={80} color="#007AFF" />
+            <Text style={styles.title}>SaleMate</Text>
+            <Text style={styles.subtitle}>Sign in to continue</Text>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
+          <View style={styles.form}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Username</Text>
               <TextInput
-                style={styles.passwordInput}
-                placeholder="Enter password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
+                style={styles.input}
+                placeholder="Enter username"
+                value={username}
+                onChangeText={setUsername}
                 autoCapitalize="none"
+                autoCorrect={false}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Ionicons 
-                  name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                  size={24} 
-                  color="#666" 
-                />
-              </TouchableOpacity>
             </View>
-          </View>
 
-          <TouchableOpacity 
-            style={[styles.signInButton, loading && styles.signInButtonDisabled]}
-            onPress={handleSignIn}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#FFF" />
-            ) : (
-              <Text style={styles.signInButtonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Enter password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons 
+                    name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                    size={24} 
+                    color="#666" 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
 
-          <View style={styles.footer}>
-            <TouchableOpacity onPress={() => router.push('/forgot-password')}>
-              <Text style={styles.linkText}>Forgot Password?</Text>
+            <TouchableOpacity 
+              style={[styles.signInButton, loading && styles.signInButtonDisabled]}
+              onPress={handleSignIn}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.signInButtonText}>Sign In</Text>
+              )}
             </TouchableOpacity>
 
-            <View style={styles.signUpContainer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/signup')}>
-                <Text style={styles.linkText}>Sign Up</Text>
+            <View style={styles.footer}>
+              <TouchableOpacity onPress={() => router.push('/forgot-password')}>
+                <Text style={styles.linkText}>Forgot Password?</Text>
               </TouchableOpacity>
+
+              <View style={styles.signUpContainer}>
+                <Text style={styles.footerText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => router.push('/signup')}>
+                  <Text style={styles.linkText}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Legal Links */}
+              <View style={styles.legalContainer}>
+                <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
+                  <Text style={styles.legalText}>Privacy Policy</Text>
+                </TouchableOpacity>
+                <Text style={styles.legalDivider}>|</Text>
+                <TouchableOpacity onPress={() => router.push('/data-deletion')}>
+                  <Text style={styles.legalText}>Data Deletion</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -129,6 +159,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
@@ -220,5 +253,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '600',
+  },
+  legalContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 8,
+  },
+  legalText: {
+    fontSize: 12,
+    color: '#999',
+  },
+  legalDivider: {
+    fontSize: 12,
+    color: '#CCC',
   },
 });
