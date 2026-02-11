@@ -356,7 +356,7 @@ async def forgot_password(request: ForgotPassword):
         return {"message": "Password reset request sent to admin."}
     
     # Send email to admin
-    subject = f"Password Reset Request - POS App"
+    subject = "Password Reset Request - POS App"
     body = f"""
 Password reset request received for user: {request.username}
 
