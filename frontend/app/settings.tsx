@@ -80,8 +80,16 @@ export default function Settings() {
 
   const performSignOut = async () => {
     try {
-      // Clear all auth data
-      await AsyncStorage.multiRemove(['authToken', 'lastActiveTime', 'setupCompleted', 'cart']);
+      // Clear all auth and session data
+      await AsyncStorage.multiRemove([
+        'authToken', 
+        'lastActiveTime', 
+        'setupCompleted', 
+        'cart',
+        'userId',
+        'businessId',
+        'username'
+      ]);
       
       // Use a slight delay to ensure AsyncStorage clears before navigation
       setTimeout(() => {
