@@ -74,7 +74,7 @@ export default function Index() {
       await AsyncStorage.setItem('lastActiveTime', Date.now().toString());
 
       // Check if setup is completed
-      const response = await axios.get(`${BACKEND_URL}/api/settings`);
+      const response = await api.get('/api/settings');
       if (response.data.setupCompleted) {
         await AsyncStorage.setItem('setupCompleted', 'true');
         router.replace('/home');
@@ -97,7 +97,7 @@ export default function Index() {
 
     setLoading(true);
     try {
-      await axios.post(`${BACKEND_URL}/api/settings/setup`, {
+      await api.post('/api/settings/setup', {
         shopName: shopName.trim(),
         ownerName: ownerName.trim(),
         upiId: upiId.trim(),
