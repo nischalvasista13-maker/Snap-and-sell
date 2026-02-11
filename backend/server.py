@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -44,6 +44,27 @@ ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'nischal.vasista13@gmail.com')
 
 # Security
 security = HTTPBearer()
+
+# ===== AUTH DEPENDENCY =====
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Extract and validate user from JWT token"""
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        business_id = payload.get("business_id")
+        username = payload.get("sub")
+        
+        if not user_id or not business_id:
+            raise HTTPException(status_code=401, detail="Invalid token: missing user or business info")
+        
+        return {
+            "user_id": user_id,
+            "business_id": business_id,
+            "username": username
+        }
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 # Helper function to convert ObjectId to string
 def object_id_to_str(doc):
