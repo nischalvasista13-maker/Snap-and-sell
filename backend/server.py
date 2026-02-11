@@ -516,10 +516,17 @@ async def delete_product(product_id: str, current_user: dict = Depends(get_curre
 # ===== SALES ENDPOINTS =====
 
 @api_router.post("/sales")
-async def create_sale(sale: Sale):
+async def create_sale(sale: Sale, current_user: dict = Depends(get_current_user)):
+    business_id = current_user["business_id"]
     sale_dict = sale.dict()
-    sale_dict['timestamp'] = datetime.utcnow()
-    sale_dict['date'] = datetime.utcnow().strftime('%Y-%m-%d')
+    sale_dict['businessId'] = business_id
+    sale_dict['timestamp'] = datetime.now(timezone.utc)
+    sale_dict['date'] = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    
+    # Validate credit sales require phone number
+    if sale_dict.get('paymentMethod', '').lower() == 'credit':
+        if not sale_dict.get('customerPhone') or not sale_dict['customerPhone'].strip():
+            raise HTTPException(status_code=400, detail="Customer phone number is required for credit sales")
     
     # Calculate per-item discount distribution
     items = sale_dict['items']
@@ -548,7 +555,7 @@ async def create_sale(sale: Sale):
     from pymongo import UpdateOne
     bulk_operations = [
         UpdateOne(
-            {"_id": ObjectId(item['productId'])},
+            {"_id": ObjectId(item['productId']), "businessId": business_id},
             {"$inc": {"stock": -item['quantity']}}
         )
         for item in sale_dict['items']
@@ -562,28 +569,33 @@ async def create_sale(sale: Sale):
     return sale_dict
 
 @api_router.get("/sales/today")
-async def get_today_sales():
-    today = datetime.utcnow().strftime('%Y-%m-%d')
-    # Optimized query with projection and reasonable limit
+async def get_today_sales(current_user: dict = Depends(get_current_user)):
+    business_id = current_user["business_id"]
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    # Filter by businessId
     sales = await db.sales.find(
-        {"date": today},
+        {"date": today, "businessId": business_id},
         {
             'items': 1,
             'total': 1,
             'paymentMethod': 1,
             'timestamp': 1,
-            'date': 1
+            'date': 1,
+            'originalTotal': 1,
+            'discountAmount': 1,
+            'customerPhone': 1
         }
     ).sort("timestamp", -1).limit(200).to_list(200)
     return [object_id_to_str(s) for s in sales]
 
 @api_router.get("/sales/date-range")
-async def get_sales_by_date_range(start_date: str, end_date: str):
+async def get_sales_by_date_range(start_date: str, end_date: str, current_user: dict = Depends(get_current_user)):
     """Get sales between start_date and end_date (inclusive, format: YYYY-MM-DD)"""
     try:
-        # Optimized query with date range and projection
+        business_id = current_user["business_id"]
         sales = await db.sales.find(
             {
+                "businessId": business_id,
                 "date": {
                     "$gte": start_date,
                     "$lte": end_date
@@ -594,7 +606,9 @@ async def get_sales_by_date_range(start_date: str, end_date: str):
                 'total': 1,
                 'paymentMethod': 1,
                 'timestamp': 1,
-                'date': 1
+                'date': 1,
+                'originalTotal': 1,
+                'discountAmount': 1
             }
         ).sort("timestamp", -1).limit(500).to_list(500)
         return [object_id_to_str(s) for s in sales]
@@ -602,13 +616,16 @@ async def get_sales_by_date_range(start_date: str, end_date: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 @api_router.get("/sales/summary")
-async def get_sales_summary(start_date: str, end_date: str):
-    """Get sales summary with payment-wise breakdown for date range"""
+async def get_sales_summary(start_date: str, end_date: str, current_user: dict = Depends(get_current_user)):
+    """Get sales summary with payment-wise breakdown for date range, including returns adjustment"""
     try:
+        business_id = current_user["business_id"]
+        
         # Aggregate sales by payment method
-        pipeline = [
+        sales_pipeline = [
             {
                 "$match": {
+                    "businessId": business_id,
                     "date": {
                         "$gte": start_date,
                         "$lte": end_date
@@ -624,11 +641,43 @@ async def get_sales_summary(start_date: str, end_date: str):
             }
         ]
         
-        result = await db.sales.aggregate(pipeline).to_list(100)
+        sales_result = await db.sales.aggregate(sales_pipeline).to_list(100)
+        
+        # Aggregate returns for the same period
+        returns_pipeline = [
+            {
+                "$match": {
+                    "businessId": business_id,
+                    "date": {
+                        "$gte": start_date,
+                        "$lte": end_date
+                    }
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$originalPaymentMethod",
+                    "total": {"$sum": "$returnTotal"},
+                    "count": {"$sum": 1}
+                }
+            }
+        ]
+        
+        returns_result = await db.returns.aggregate(returns_pipeline).to_list(100)
+        
+        # Build returns totals by payment method
+        returns_by_method = {}
+        total_returns = 0
+        for item in returns_result:
+            method = (item['_id'] or 'other').lower()
+            returns_by_method[method] = item['total']
+            total_returns += item['total']
         
         # Initialize summary
         summary = {
-            "totalSales": 0,
+            "grossSales": 0,
+            "totalReturns": total_returns,
+            "netSales": 0,
             "cashTotal": 0,
             "upiTotal": 0,
             "cardTotal": 0,
@@ -639,39 +688,50 @@ async def get_sales_summary(start_date: str, end_date: str):
         }
         
         # Process aggregation results
-        for item in result:
+        for item in sales_result:
             payment_method = item['_id'].lower() if item['_id'] else 'other'
-            total = item['total']
+            gross_total = item['total']
             count = item['count']
             
-            summary["totalSales"] += total
+            # Get returns for this payment method
+            method_returns = returns_by_method.get(payment_method, 0)
+            net_total = gross_total - method_returns
+            
+            summary["grossSales"] += gross_total
             summary["totalTransactions"] += count
             
             if payment_method == 'cash':
-                summary["cashTotal"] = total
+                summary["cashTotal"] = net_total
             elif payment_method == 'upi':
-                summary["upiTotal"] = total
+                summary["upiTotal"] = net_total
             elif payment_method == 'card':
-                summary["cardTotal"] = total
+                summary["cardTotal"] = net_total
             elif payment_method == 'credit':
-                summary["creditTotal"] = total
+                summary["creditTotal"] = net_total
             else:
-                summary["otherTotal"] += total
+                summary["otherTotal"] += net_total
             
             summary["breakdown"][payment_method] = {
-                "total": total,
+                "gross": gross_total,
+                "returns": method_returns,
+                "net": net_total,
                 "count": count
             }
+        
+        # Calculate net sales
+        summary["netSales"] = summary["grossSales"] - summary["totalReturns"]
+        # Keep totalSales for backward compatibility
+        summary["totalSales"] = summary["netSales"]
         
         return summary
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @api_router.get("/sales")
-async def get_all_sales():
-    # Optimized query with projection, sort, and limit
+async def get_all_sales(current_user: dict = Depends(get_current_user)):
+    business_id = current_user["business_id"]
     sales = await db.sales.find(
-        {},
+        {"businessId": business_id},
         {
             'items': 1,
             'total': 1,
@@ -683,10 +743,11 @@ async def get_all_sales():
     return [object_id_to_str(s) for s in sales]
 
 @api_router.get("/sales/{sale_id}")
-async def get_sale_by_id(sale_id: str):
+async def get_sale_by_id(sale_id: str, current_user: dict = Depends(get_current_user)):
     """Get a specific sale by ID"""
     try:
-        sale = await db.sales.find_one({"_id": ObjectId(sale_id)})
+        business_id = current_user["business_id"]
+        sale = await db.sales.find_one({"_id": ObjectId(sale_id), "businessId": business_id})
         if not sale:
             raise HTTPException(status_code=404, detail="Sale not found")
         return object_id_to_str(sale)
