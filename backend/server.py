@@ -374,32 +374,56 @@ Please assist the user with password reset.
 # ===== SETTINGS ENDPOINTS =====
 
 @api_router.post("/settings/setup")
-async def create_setup(settings: Settings):
-    # Check if setup already exists
-    existing = await db.settings.find_one()
+async def create_setup(settings: Settings, current_user: dict = Depends(get_current_user)):
+    """Create or update settings for the current business"""
+    business_id = current_user["business_id"]
+    
+    # Check if setup already exists for this business
+    existing = await db.settings.find_one({"businessId": business_id})
     if existing:
-        raise HTTPException(status_code=400, detail="Setup already completed")
+        # Update existing settings
+        update_dict = settings.dict()
+        update_dict["businessId"] = business_id
+        update_dict["updatedAt"] = datetime.now(timezone.utc)
+        await db.settings.update_one(
+            {"businessId": business_id},
+            {"$set": update_dict}
+        )
+        updated = await db.settings.find_one({"businessId": business_id})
+        return object_id_to_str(updated)
     
     settings_dict = settings.dict()
+    settings_dict["businessId"] = business_id
+    settings_dict["createdAt"] = datetime.now(timezone.utc)
     result = await db.settings.insert_one(settings_dict)
     settings_dict['_id'] = str(result.inserted_id)
     return settings_dict
 
 @api_router.get("/settings")
-async def get_settings():
-    settings = await db.settings.find_one()
+async def get_settings(current_user: dict = Depends(get_current_user)):
+    """Get settings for the current business"""
+    business_id = current_user["business_id"]
+    settings = await db.settings.find_one({"businessId": business_id})
     if not settings:
-        return {"setupCompleted": False}
+        return {"setupCompleted": False, "businessId": business_id}
     return object_id_to_str(settings)
 
 @api_router.put("/settings/{settings_id}")
-async def update_settings(settings_id: str, settings_update: Settings):
+async def update_settings(settings_id: str, settings_update: Settings, current_user: dict = Depends(get_current_user)):
     try:
+        business_id = current_user["business_id"]
+        
+        # Verify settings belong to user's business
+        existing = await db.settings.find_one({"_id": ObjectId(settings_id), "businessId": business_id})
+        if not existing:
+            raise HTTPException(status_code=404, detail="Settings not found")
+        
         update_dict = settings_update.dict()
-        update_dict.pop('setupCompleted', None)  # Don't allow changing setupCompleted
+        update_dict.pop('setupCompleted', None)  # Don't allow changing setupCompleted directly
+        update_dict["updatedAt"] = datetime.now(timezone.utc)
         
         result = await db.settings.update_one(
-            {"_id": ObjectId(settings_id)},
+            {"_id": ObjectId(settings_id), "businessId": business_id},
             {"$set": update_dict}
         )
         
