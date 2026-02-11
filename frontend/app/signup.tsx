@@ -3,13 +3,13 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function SignUp() {
   const router = useRouter();
   const [username, setUsername] = useState('');
+  const [businessName, setBusinessName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export default function SignUp() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSignUp = async () => {
-    if (!username.trim() || !password || !confirmPassword) {
+    if (!username.trim() || !businessName.trim() || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -34,17 +34,18 @@ export default function SignUp() {
 
     setLoading(true);
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/auth/signup`, {
+      await axios.post(`${BACKEND_URL}/api/auth/signup`, {
         username: username.trim(),
-        password: password
+        password: password,
+        businessName: businessName.trim()
       });
 
-      // Store auth token and set last active time
-      await AsyncStorage.setItem('authToken', response.data.access_token);
-      await AsyncStorage.setItem('lastActiveTime', Date.now().toString());
-
-      // Navigate to setup
-      router.replace('/');
+      // Show success and redirect to signin (no auto-login)
+      Alert.alert(
+        'Account Created',
+        'Your account has been created successfully. Please sign in.',
+        [{ text: 'OK', onPress: () => router.replace('/signin') }]
+      );
     } catch (error: any) {
       console.error('Sign up error:', error);
       if (error.response?.status === 400) {
@@ -73,6 +74,17 @@ export default function SignUp() {
         </View>
 
         <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Business/Shop Name *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your shop name"
+              value={businessName}
+              onChangeText={setBusinessName}
+              autoCapitalize="words"
+            />
+          </View>
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Username *</Text>
             <TextInput
@@ -151,6 +163,17 @@ export default function SignUp() {
               <Text style={styles.footerText}>Already have an account? </Text>
               <TouchableOpacity onPress={() => router.back()}>
                 <Text style={styles.linkText}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Legal Links */}
+            <View style={styles.legalContainer}>
+              <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
+                <Text style={styles.legalText}>Privacy Policy</Text>
+              </TouchableOpacity>
+              <Text style={styles.legalDivider}>|</Text>
+              <TouchableOpacity onPress={() => router.push('/data-deletion')}>
+                <Text style={styles.legalText}>Data Deletion</Text>
               </TouchableOpacity>
             </View>
           </View>
