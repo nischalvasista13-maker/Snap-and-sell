@@ -2,10 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator, Alert, AppState } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import api from './utils/api';
 import { Ionicons } from '@expo/vector-icons';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
 const INACTIVITY_TIMEOUT = 3 * 60 * 60 * 1000; // 3 hours in milliseconds
 
 export default function Index() {
@@ -46,7 +45,7 @@ export default function Index() {
         
         if (timeSinceLastActive > INACTIVITY_TIMEOUT) {
           // Auto logout - clear auth data
-          await AsyncStorage.multiRemove(['authToken', 'lastActiveTime', 'setupCompleted']);
+          await AsyncStorage.multiRemove(['authToken', 'lastActiveTime', 'setupCompleted', 'userId', 'businessId', 'username']);
           Alert.alert('Session Expired', 'You have been logged out due to inactivity.', [
             { text: 'OK', onPress: () => router.replace('/signin') }
           ]);
