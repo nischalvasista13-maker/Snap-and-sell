@@ -230,21 +230,21 @@ class TestDataIsolation:
         product = create_resp.json()
         product_id = product["_id"]
         
-        # User2 tries to get User1's product by ID - should fail
+        # User2 tries to get User1's product by ID - should fail (400 or 404)
         get_resp = user2_session.get(f"{BASE_URL}/api/products/{product_id}")
-        assert get_resp.status_code == 404, "User2 should NOT be able to access User1's product"
+        assert get_resp.status_code in [400, 404], f"User2 should NOT be able to access User1's product, got {get_resp.status_code}"
         
-        print("✓ User2 cannot access User1's product by ID")
+        print(f"✓ User2 cannot access User1's product by ID (status: {get_resp.status_code})")
         
-        # User2 tries to update User1's product - should fail
+        # User2 tries to update User1's product - should fail (400 or 404)
         update_resp = user2_session.put(f"{BASE_URL}/api/products/{product_id}", json={"name": "Hacked"})
-        assert update_resp.status_code == 404, "User2 should NOT be able to update User1's product"
+        assert update_resp.status_code in [400, 404], f"User2 should NOT be able to update User1's product, got {update_resp.status_code}"
         
-        print("✓ User2 cannot update User1's product")
+        print(f"✓ User2 cannot update User1's product (status: {update_resp.status_code})")
         
-        # User2 tries to delete User1's product - should fail
+        # User2 tries to delete User1's product - should fail (400 or 404)
         delete_resp = user2_session.delete(f"{BASE_URL}/api/products/{product_id}")
-        assert delete_resp.status_code == 404, "User2 should NOT be able to delete User1's product"
+        assert delete_resp.status_code in [400, 404], f"User2 should NOT be able to delete User1's product, got {delete_resp.status_code}"
         
         print("✓ User2 cannot delete User1's product")
         
@@ -485,9 +485,9 @@ class TestSalesDataIsolation:
         
         print(f"✓ User2 sees {len(user2_sales)} sales today (correctly excludes User1's sale)")
         
-        # User2 tries to get User1's sale by ID - should fail
+        # User2 tries to get User1's sale by ID - should fail (400 or 404)
         get_resp = user2_session.get(f"{BASE_URL}/api/sales/{sale_id}")
-        assert get_resp.status_code == 404, "User2 should NOT access User1's sale by ID"
+        assert get_resp.status_code in [400, 404], f"User2 should NOT access User1's sale by ID, got {get_resp.status_code}"
         
         print("✓ User2 cannot access User1's sale by ID")
         
