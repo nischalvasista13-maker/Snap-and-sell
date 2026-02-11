@@ -48,11 +48,14 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'nischal.vasista13@gmail.com')
 
 # Security
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 # ===== AUTH DEPENDENCY =====
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Extract and validate user from JWT token"""
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
     try:
         token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
