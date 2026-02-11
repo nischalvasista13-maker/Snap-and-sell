@@ -81,8 +81,15 @@ export default function Index() {
       } else {
         setSetupMode(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking setup:', error);
+      // If 401/403, token is invalid - redirect to signin
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        await AsyncStorage.multiRemove(['authToken', 'userId', 'businessId', 'username', 'lastActiveTime', 'setupCompleted']);
+        router.replace('/signin');
+        return;
+      }
+      // For other errors (network issues), show setup mode to retry
       setSetupMode(true);
     } finally {
       setLoading(false);
