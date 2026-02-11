@@ -100,20 +100,29 @@ export default function Success() {
       return;
     }
 
+    // Clean phone number: remove +, spaces, dashes, and any non-digit characters
+    const cleanPhone = customerPhone.replace(/[^0-9]/g, '');
+    
+    // Ensure phone has country code (default to India +91 if 10 digits)
+    const phoneWithCode = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
     const billText = generateBillText();
     const encodedMessage = encodeURIComponent(billText);
-    const whatsappUrl = `https://wa.me/${customerPhone}?text=${encodedMessage}`;
+    
+    // Use the universal https://wa.me/ format for production compatibility
+    const whatsappUrl = `https://wa.me/${phoneWithCode}?text=${encodedMessage}`;
     
     try {
       const canOpen = await Linking.canOpenURL(whatsappUrl);
       if (canOpen) {
         await Linking.openURL(whatsappUrl);
       } else {
-        Alert.alert('Error', 'WhatsApp is not installed on this device');
+        // Fallback: try without checking (some devices don't properly report canOpenURL)
+        await Linking.openURL(whatsappUrl);
       }
     } catch (error) {
       console.error('Error opening WhatsApp:', error);
-      Alert.alert('Error', 'Failed to open WhatsApp');
+      Alert.alert('Error', 'Failed to open WhatsApp. Please check if WhatsApp is installed.');
     }
   };
 
