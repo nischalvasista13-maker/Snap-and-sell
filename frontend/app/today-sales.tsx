@@ -102,12 +102,6 @@ export default function TodaySales() {
     try {
       const { startDate: start, endDate: end } = getDateRange();
       
-      console.log('[TodaySales] Fetching sales data...', {
-        backend: API_URL,
-        startDate: start,
-        endDate: end
-      });
-      
       // Always use date-range endpoint with explicit dates (even for "Today")
       const [salesResponse, summaryResponse] = await Promise.all([
         api.get(`/api/sales/date-range`, {
@@ -120,11 +114,6 @@ export default function TodaySales() {
         })
       ]);
       
-      console.log('[TodaySales] Data loaded successfully:', {
-        salesCount: salesResponse.data?.length || 0,
-        totalSales: summaryResponse.data?.totalSales || 0
-      });
-      
       setSales(salesResponse.data);
       setPaymentSummary(summaryResponse.data);
     } catch (error: any) {
@@ -132,10 +121,7 @@ export default function TodaySales() {
       console.error('[TodaySales] API Error:', {
         message: error?.message,
         code: error?.code,
-        status: error?.response?.status,
-        statusText: error?.response?.statusText,
-        url: error?.config?.url,
-        backendUrl: API_URL
+        status: error?.response?.status
       });
       
       // Show user-friendly error for network issues
