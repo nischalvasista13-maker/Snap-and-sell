@@ -438,20 +438,23 @@ async def update_settings(settings_id: str, settings_update: Settings, current_u
 # ===== PRODUCT ENDPOINTS =====
 
 @api_router.post("/products")
-async def create_product(product: Product):
+async def create_product(product: Product, current_user: dict = Depends(get_current_user)):
+    business_id = current_user["business_id"]
     product_dict = product.dict()
-    product_dict['createdAt'] = datetime.utcnow()
-    product_dict['updatedAt'] = datetime.utcnow()
+    product_dict['businessId'] = business_id
+    product_dict['createdAt'] = datetime.now(timezone.utc)
+    product_dict['updatedAt'] = datetime.now(timezone.utc)
     
     result = await db.products.insert_one(product_dict)
     product_dict['_id'] = str(result.inserted_id)
     return product_dict
 
 @api_router.get("/products")
-async def get_products():
-    # Optimized query with projection - only fetch needed fields
+async def get_products(current_user: dict = Depends(get_current_user)):
+    business_id = current_user["business_id"]
+    # Optimized query with projection - filter by businessId
     products = await db.products.find(
-        {},
+        {"businessId": business_id},
         {
             'name': 1, 
             'price': 1, 
@@ -459,17 +462,20 @@ async def get_products():
             'images': 1, 
             'category': 1,
             'size': 1,
+            'sizeQuantities': 1,
             'color': 1,
             'createdAt': 1,
-            'updatedAt': 1
+            'updatedAt': 1,
+            'businessId': 1
         }
-    ).to_list(500)  # Reasonable limit
+    ).to_list(500)
     return [object_id_to_str(p) for p in products]
 
 @api_router.get("/products/{product_id}")
-async def get_product(product_id: str):
+async def get_product(product_id: str, current_user: dict = Depends(get_current_user)):
     try:
-        product = await db.products.find_one({"_id": ObjectId(product_id)})
+        business_id = current_user["business_id"]
+        product = await db.products.find_one({"_id": ObjectId(product_id), "businessId": business_id})
         if not product:
             raise HTTPException(status_code=404, detail="Product not found")
         return object_id_to_str(product)
@@ -477,13 +483,14 @@ async def get_product(product_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 @api_router.put("/products/{product_id}")
-async def update_product(product_id: str, product_update: ProductUpdate):
+async def update_product(product_id: str, product_update: ProductUpdate, current_user: dict = Depends(get_current_user)):
     try:
+        business_id = current_user["business_id"]
         update_dict = {k: v for k, v in product_update.dict().items() if v is not None}
-        update_dict['updatedAt'] = datetime.utcnow()
+        update_dict['updatedAt'] = datetime.now(timezone.utc)
         
         result = await db.products.update_one(
-            {"_id": ObjectId(product_id)},
+            {"_id": ObjectId(product_id), "businessId": business_id},
             {"$set": update_dict}
         )
         
@@ -496,9 +503,10 @@ async def update_product(product_id: str, product_update: ProductUpdate):
         raise HTTPException(status_code=400, detail=str(e))
 
 @api_router.delete("/products/{product_id}")
-async def delete_product(product_id: str):
+async def delete_product(product_id: str, current_user: dict = Depends(get_current_user)):
     try:
-        result = await db.products.delete_one({"_id": ObjectId(product_id)})
+        business_id = current_user["business_id"]
+        result = await db.products.delete_one({"_id": ObjectId(product_id), "businessId": business_id})
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Product not found")
         return {"message": "Product deleted successfully"}
