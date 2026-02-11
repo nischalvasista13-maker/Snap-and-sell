@@ -262,31 +262,61 @@ async def send_email(subject: str, body: str, to_email: str):
 
 # ===== AUTH ENDPOINTS =====
 
-@api_router.post("/auth/signup", response_model=Token)
+@api_router.post("/auth/signup", response_model=SignupResponse)
 async def signup(user: UserCreate):
+    """
+    Create a new user with a new business.
+    Does NOT auto-login - redirects to signin.
+    """
     # Check if username exists
     existing_user = await db.users.find_one({"username": user.username})
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already exists")
     
-    # Create new user
+    # Create new business first
+    business_doc = {
+        "name": user.businessName,
+        "createdAt": datetime.now(timezone.utc),
+        "updatedAt": datetime.now(timezone.utc)
+    }
+    business_result = await db.businesses.insert_one(business_doc)
+    business_id = str(business_result.inserted_id)
+    
+    # Create new user linked to the business
     hashed_password = hash_password(user.password)
     user_doc = {
         "username": user.username,
         "password": hashed_password,
-        "createdAt": datetime.utcnow()
+        "businessId": business_id,
+        "createdAt": datetime.now(timezone.utc)
     }
     
-    result = await db.users.insert_one(user_doc)
-    user_id = str(result.inserted_id)
+    user_result = await db.users.insert_one(user_doc)
+    user_id = str(user_result.inserted_id)
     
-    # Create access token
-    access_token = create_access_token(data={"sub": user.username, "user_id": user_id})
+    # Create default settings for the business
+    settings_doc = {
+        "businessId": business_id,
+        "shopName": user.businessName,
+        "ownerName": "",
+        "upiId": "",
+        "setupCompleted": False,
+        "createdAt": datetime.now(timezone.utc)
+    }
+    await db.settings.insert_one(settings_doc)
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    # Do NOT return token - user must sign in manually
+    return SignupResponse(
+        message="Account created successfully. Please sign in.",
+        userId=user_id,
+        businessId=business_id
+    )
 
-@api_router.post("/auth/signin", response_model=Token)
+@api_router.post("/auth/signin", response_model=LoginResponse)
 async def signin(user: UserLogin):
+    """
+    Sign in user and return token with userId and businessId.
+    """
     # Find user
     db_user = await db.users.find_one({"username": user.username})
     if not db_user:
@@ -296,11 +326,26 @@ async def signin(user: UserLogin):
     if not verify_password(user.password, db_user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    # Create access token
     user_id = str(db_user["_id"])
-    access_token = create_access_token(data={"sub": user.username, "user_id": user_id})
+    business_id = db_user.get("businessId")
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    if not business_id:
+        raise HTTPException(status_code=400, detail="User has no associated business")
+    
+    # Create access token with userId and businessId
+    access_token = create_access_token(data={
+        "sub": user.username,
+        "user_id": user_id,
+        "business_id": business_id
+    })
+    
+    return LoginResponse(
+        access_token=access_token,
+        token_type="bearer",
+        userId=user_id,
+        businessId=business_id,
+        username=user.username
+    )
 
 @api_router.post("/auth/forgot-password")
 async def forgot_password(request: ForgotPassword):
