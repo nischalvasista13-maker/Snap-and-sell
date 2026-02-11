@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from './utils/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 interface Product {
   _id: string;
@@ -29,7 +29,7 @@ export default function Inventory() {
 
   const loadProducts = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/products`);
+      const response = await api.get(`/api/products`);
       setProducts(response.data);
     } catch (error) {
       console.error('Error loading products:', error);
@@ -56,7 +56,7 @@ export default function Inventory() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await axios.delete(`${BACKEND_URL}/api/products/${productId}`);
+              await api.delete(`/api/products/${productId}`);
               loadProducts();
             } catch (error) {
               console.error('Error deleting product:', error);

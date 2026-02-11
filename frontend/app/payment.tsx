@@ -3,9 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIn
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import api from './utils/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 interface CartItem {
   productId: string;
@@ -101,7 +101,7 @@ export default function Payment() {
         customerPhone: checkoutData?.customerPhone || null
       };
 
-      const response = await axios.post(`${BACKEND_URL}/api/sales`, saleData);
+      const response = await api.post(`/api/sales`, saleData);
       const saleId = response.data._id || response.data.id;
       
       // Clear cart and checkout data

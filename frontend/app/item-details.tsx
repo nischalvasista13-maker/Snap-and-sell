@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from './utils/api';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 export default function ItemDetails() {
   const router = useRouter();

@@ -3,10 +3,10 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } fr
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from './utils/api';
 import * as ImageManipulator from 'expo-image-manipulator';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 export default function Sell() {
   const router = useRouter();

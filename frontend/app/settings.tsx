@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from './utils/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 export default function Settings() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function Settings() {
 
   const loadSettings = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/settings`);
+      const response = await api.get(`/api/settings`);
       if (response.data._id) {
         setSettingsId(response.data._id);
         setShopName(response.data.shopName || '');
@@ -45,7 +45,7 @@ export default function Settings() {
 
     setSaving(true);
     try {
-      await axios.put(`${BACKEND_URL}/api/settings/${settingsId}`, {
+      await api.put(`/api/settings/${settingsId}`, {
         shopName: shopName.trim(),
         ownerName: ownerName.trim(),
         upiId: upiId.trim(),

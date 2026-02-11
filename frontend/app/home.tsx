@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Alert } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import api from './utils/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 export default function Home() {
   const router = useRouter();
@@ -35,18 +35,18 @@ export default function Home() {
   const loadData = async () => {
     try {
       // Get settings
-      const settingsRes = await axios.get(`${BACKEND_URL}/api/settings`);
+      const settingsRes = await api.get(`/api/settings`);
       if (settingsRes.data.shopName) {
         setShopName(settingsRes.data.shopName);
       }
 
       // Get today's sales
-      const salesRes = await axios.get(`${BACKEND_URL}/api/sales/today`);
+      const salesRes = await api.get(`/api/sales/today`);
       const total = salesRes.data.reduce((sum: number, sale: any) => sum + sale.total, 0);
       setTodaySales(total);
 
       // Get products count
-      const productsRes = await axios.get(`${BACKEND_URL}/api/products`);
+      const productsRes = await api.get(`/api/products`);
       setTotalProducts(productsRes.data.length);
     } catch (error) {
       console.error('Error loading data:', error);

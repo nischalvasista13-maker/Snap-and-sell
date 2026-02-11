@@ -3,10 +3,10 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Scr
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
-import axios from 'axios';
+import api from './utils/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 interface CartItem {
   productId: string;
@@ -33,7 +33,7 @@ export default function UpiQr() {
 
   const loadSettings = async () => {
     try {
-      const response = await axios.get(`${BACKEND_URL}/api/settings`);
+      const response = await api.get(`/api/settings`);
       setUpiId(response.data.upiId || '');
       setShopName(response.data.shopName || '');
     } catch (error) {
@@ -68,7 +68,7 @@ export default function UpiQr() {
                 paymentMethod: 'upi'
               };
 
-              await axios.post(`${BACKEND_URL}/api/sales`, saleData);
+              await api.post(`/api/sales`, saleData);
               
               // Clear cart
               await AsyncStorage.removeItem('cart');
