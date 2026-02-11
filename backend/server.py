@@ -757,17 +757,21 @@ async def get_sale_by_id(sale_id: str, current_user: dict = Depends(get_current_
 # ===== RETURNS ENDPOINTS =====
 
 @api_router.post("/returns")
-async def create_return(return_data: Return):
+async def create_return(return_data: Return, current_user: dict = Depends(get_current_user)):
     """Create a return and update inventory"""
     try:
-        # Verify original sale exists
-        original_sale = await db.sales.find_one({"_id": ObjectId(return_data.originalSaleId)})
+        business_id = current_user["business_id"]
+        
+        # Verify original sale exists and belongs to this business
+        original_sale = await db.sales.find_one({"_id": ObjectId(return_data.originalSaleId), "businessId": business_id})
         if not original_sale:
             raise HTTPException(status_code=404, detail="Original sale not found")
         
         return_dict = return_data.dict()
-        return_dict['timestamp'] = datetime.utcnow()
-        return_dict['date'] = datetime.utcnow().strftime('%Y-%m-%d')
+        return_dict['businessId'] = business_id
+        return_dict['originalPaymentMethod'] = original_sale.get('paymentMethod', 'other')
+        return_dict['timestamp'] = datetime.now(timezone.utc)
+        return_dict['date'] = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         
         # Update inventory - increase stock for returned items
         from pymongo import UpdateOne
@@ -775,7 +779,7 @@ async def create_return(return_data: Return):
         for item in return_dict['items']:
             bulk_operations.append(
                 UpdateOne(
-                    {"_id": ObjectId(item['productId'])},
+                    {"_id": ObjectId(item['productId']), "businessId": business_id},
                     {"$inc": {"stock": item['quantity']}}
                 )
             )
@@ -794,27 +798,32 @@ async def create_return(return_data: Return):
         raise HTTPException(status_code=400, detail=str(e))
 
 @api_router.get("/returns")
-async def get_all_returns():
-    """Get all returns"""
-    returns = await db.returns.find().sort("timestamp", -1).limit(100).to_list(100)
+async def get_all_returns(current_user: dict = Depends(get_current_user)):
+    """Get all returns for the current business"""
+    business_id = current_user["business_id"]
+    returns = await db.returns.find({"businessId": business_id}).sort("timestamp", -1).limit(100).to_list(100)
     return [object_id_to_str(r) for r in returns]
 
 @api_router.get("/returns/by-sale/{sale_id}")
-async def get_returns_by_sale(sale_id: str):
+async def get_returns_by_sale(sale_id: str, current_user: dict = Depends(get_current_user)):
     """Get all returns for a specific sale"""
-    returns = await db.returns.find({"originalSaleId": sale_id}).to_list(100)
+    business_id = current_user["business_id"]
+    returns = await db.returns.find({"originalSaleId": sale_id, "businessId": business_id}).to_list(100)
     return [object_id_to_str(r) for r in returns]
 
 @api_router.post("/exchanges")
 async def create_exchange(
     original_sale_id: str,
     return_items: List[ReturnItem],
-    new_sale: Sale
+    new_sale: Sale,
+    current_user: dict = Depends(get_current_user)
 ):
     """Create an exchange - return items and create new sale"""
     try:
-        # Verify original sale exists
-        original_sale = await db.sales.find_one({"_id": ObjectId(original_sale_id)})
+        business_id = current_user["business_id"]
+        
+        # Verify original sale exists and belongs to this business
+        original_sale = await db.sales.find_one({"_id": ObjectId(original_sale_id), "businessId": business_id})
         if not original_sale:
             raise HTTPException(status_code=404, detail="Original sale not found")
         
@@ -823,20 +832,22 @@ async def create_exchange(
         
         # Create the return record first
         return_dict = {
+            "businessId": business_id,
             "originalSaleId": original_sale_id,
+            "originalPaymentMethod": original_sale.get('paymentMethod', 'other'),
             "items": [item.dict() for item in return_items],
             "returnTotal": return_total,
             "reason": "Exchange",
             "type": "exchange",
-            "timestamp": datetime.utcnow(),
-            "date": datetime.utcnow().strftime('%Y-%m-%d')
+            "timestamp": datetime.now(timezone.utc),
+            "date": datetime.now(timezone.utc).strftime('%Y-%m-%d')
         }
         
         # Update inventory - increase stock for returned items
         from pymongo import UpdateOne
         return_bulk_ops = [
             UpdateOne(
-                {"_id": ObjectId(item.productId)},
+                {"_id": ObjectId(item.productId), "businessId": business_id},
                 {"$inc": {"stock": item.quantity}}
             )
             for item in return_items
@@ -847,13 +858,14 @@ async def create_exchange(
         
         # Create the new sale
         new_sale_dict = new_sale.dict()
-        new_sale_dict['timestamp'] = datetime.utcnow()
-        new_sale_dict['date'] = datetime.utcnow().strftime('%Y-%m-%d')
+        new_sale_dict['businessId'] = business_id
+        new_sale_dict['timestamp'] = datetime.now(timezone.utc)
+        new_sale_dict['date'] = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         
         # Update inventory - decrease stock for new sale items
         sale_bulk_ops = [
             UpdateOne(
-                {"_id": ObjectId(item['productId'])},
+                {"_id": ObjectId(item['productId']), "businessId": business_id},
                 {"$inc": {"stock": -item['quantity']}}
             )
             for item in new_sale_dict['items']
