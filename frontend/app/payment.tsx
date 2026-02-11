@@ -74,6 +74,19 @@ export default function Payment() {
       return;
     }
 
+    // Validate phone number is required for Credit
+    if (selectedMethod === 'credit') {
+      const phone = checkoutData?.customerPhone?.trim();
+      if (!phone || phone.length < 10) {
+        Alert.alert(
+          'Phone Number Required',
+          'Customer phone number is required for credit (udhaar) sales. Please go back and enter a valid phone number.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+
     // If UPI is selected, navigate to UPI QR screen
     if (selectedMethod === 'upi') {
       router.push({
