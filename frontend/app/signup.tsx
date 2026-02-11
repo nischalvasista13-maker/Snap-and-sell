@@ -278,4 +278,18 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
+  legalContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    gap: 8,
+  },
+  legalText: {
+    fontSize: 12,
+    color: '#999',
+  },
+  legalDivider: {
+    fontSize: 12,
+    color: '#CCC',
+  },
 });
