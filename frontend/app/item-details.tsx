@@ -60,8 +60,8 @@ export default function ItemDetails() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      await axios.post(
-        `${BACKEND_URL}/api/products`, 
+      await api.post(
+        '/api/products', 
         {
           name: name.trim(),
           price: Number(price),
