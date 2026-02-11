@@ -547,9 +547,111 @@ async def create_product(product: Product, current_user: dict = Depends(get_curr
     product_dict['createdAt'] = datetime.now(timezone.utc)
     product_dict['updatedAt'] = datetime.now(timezone.utc)
     
+    # Compute and store image hash/histogram for matching
+    if product_dict.get('images') and len(product_dict['images']) > 0:
+        first_image = product_dict['images'][0]
+        product_dict['imageHash'] = compute_image_hash(first_image)
+        product_dict['colorHistogram'] = compute_color_histogram(first_image)
+    
     result = await db.products.insert_one(product_dict)
     product_dict['_id'] = str(result.inserted_id)
     return product_dict
+
+@api_router.post("/products/match-image", response_model=ImageMatchResponse)
+async def match_product_image(request: ImageMatchRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Find products that match the provided image.
+    Returns matches sorted by similarity score.
+    """
+    business_id = current_user["business_id"]
+    
+    # Compute hash and histogram for input image
+    input_hash = compute_image_hash(request.imageData)
+    input_histogram = compute_color_histogram(request.imageData)
+    
+    if not input_hash and not input_histogram:
+        return ImageMatchResponse(
+            matches=[],
+            hasMatch=False,
+            message="Could not process the image. Please try again."
+        )
+    
+    # Get all products with images for this business
+    products = await db.products.find(
+        {"businessId": business_id, "images": {"$exists": True, "$ne": []}},
+        {"name": 1, "images": 1, "imageHash": 1, "colorHistogram": 1}
+    ).to_list(500)
+    
+    if not products:
+        return ImageMatchResponse(
+            matches=[],
+            hasMatch=False,
+            message="No products found. Add some products first."
+        )
+    
+    # Calculate similarity for each product
+    matches = []
+    for product in products:
+        similarity_scores = []
+        
+        # Hash similarity (weighted 0.6)
+        if input_hash and product.get('imageHash'):
+            hash_sim = compare_hashes(input_hash, product['imageHash'])
+            similarity_scores.append(('hash', hash_sim, 0.6))
+        
+        # Color histogram similarity (weighted 0.4)
+        if input_histogram and product.get('colorHistogram'):
+            hist_sim = compare_histograms(input_histogram, product['colorHistogram'])
+            similarity_scores.append(('hist', hist_sim, 0.4))
+        
+        # If no stored features, compute on the fly from first image
+        if not similarity_scores and product.get('images'):
+            stored_hash = compute_image_hash(product['images'][0])
+            stored_hist = compute_color_histogram(product['images'][0])
+            
+            if input_hash and stored_hash:
+                hash_sim = compare_hashes(input_hash, stored_hash)
+                similarity_scores.append(('hash', hash_sim, 0.6))
+            
+            if input_histogram and stored_hist:
+                hist_sim = compare_histograms(input_histogram, stored_hist)
+                similarity_scores.append(('hist', hist_sim, 0.4))
+        
+        # Calculate weighted average
+        if similarity_scores:
+            total_weight = sum(s[2] for s in similarity_scores)
+            weighted_sum = sum(s[1] * s[2] for s in similarity_scores)
+            final_similarity = weighted_sum / total_weight if total_weight > 0 else 0
+            
+            matches.append(ImageMatchResult(
+                productId=str(product['_id']),
+                productName=product.get('name', 'Unknown'),
+                similarity=round(final_similarity, 3),
+                images=product.get('images', [])[:1]  # Include first image for preview
+            ))
+    
+    # Sort by similarity (highest first)
+    matches.sort(key=lambda x: x.similarity, reverse=True)
+    
+    # Check if we have a good match (threshold 0.7)
+    SIMILARITY_THRESHOLD = 0.7
+    has_match = len(matches) > 0 and matches[0].similarity >= SIMILARITY_THRESHOLD
+    
+    # Return top 5 matches
+    top_matches = matches[:5]
+    
+    if has_match:
+        message = f"Found matching product: {top_matches[0].productName}"
+    elif top_matches:
+        message = "No exact match found. Here are similar products:"
+    else:
+        message = "Product not found. Search manually."
+    
+    return ImageMatchResponse(
+        matches=top_matches,
+        hasMatch=has_match,
+        message=message
+    )
 
 @api_router.get("/products")
 async def get_products(current_user: dict = Depends(get_current_user)):
