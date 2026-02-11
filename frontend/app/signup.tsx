@@ -168,11 +168,11 @@ export default function SignUp() {
             
             {/* Legal Links */}
             <View style={styles.legalContainer}>
-              <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
+              <TouchableOpacity onPress={() => router.push('/privacy-policy' as any)}>
                 <Text style={styles.legalText}>Privacy Policy</Text>
               </TouchableOpacity>
               <Text style={styles.legalDivider}>|</Text>
-              <TouchableOpacity onPress={() => router.push('/data-deletion')}>
+              <TouchableOpacity onPress={() => router.push('/data-deletion' as any)}>
                 <Text style={styles.legalText}>Data Deletion</Text>
               </TouchableOpacity>
             </View>
