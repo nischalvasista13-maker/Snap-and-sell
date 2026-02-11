@@ -168,16 +168,51 @@ export default function ItemMatch() {
       {/* Message Banner */}
       {hasAttemptedMatch && capturedImage && (
         <View style={matchedProduct ? styles.successBanner : styles.warningBanner}>
-          <Ionicons 
-            name={matchedProduct ? "checkmark-circle" : "information-circle"} 
-            size={20} 
-            color={matchedProduct ? "#34C759" : "#FF9500"} 
-          />
-          <Text style={matchedProduct ? styles.successText : styles.warningText}>
-            {matchedProduct 
-              ? "Suggested (based on similarity)" 
-              : "Product not found. Select manually."}
-          </Text>
+          {isMatching ? (
+            <>
+              <ActivityIndicator size="small" color="#007AFF" />
+              <Text style={styles.warningText}>Analyzing image...</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons 
+                name={matchedProduct ? "checkmark-circle" : "information-circle"} 
+                size={20} 
+                color={matchedProduct ? "#34C759" : "#FF9500"} 
+              />
+              <Text style={matchedProduct ? styles.successText : styles.warningText}>
+                {matchMessage || (matchedProduct 
+                  ? "Suggested match found" 
+                  : "Product not found. Search manually.")}
+              </Text>
+            </>
+          )}
+        </View>
+      )}
+
+      {/* Similar Products Section - show when no exact match */}
+      {hasAttemptedMatch && !matchedProduct && suggestedProducts.length > 0 && (
+        <View style={styles.similarSection}>
+          <Text style={styles.similarTitle}>Similar Products:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {suggestedProducts.map((match, index) => {
+              const product = products.find(p => p._id === match.productId);
+              if (!product) return null;
+              return (
+                <TouchableOpacity
+                  key={match.productId}
+                  style={styles.similarCard}
+                  onPress={() => handleSelectProduct(product)}
+                >
+                  {match.images[0] && (
+                    <Image source={{ uri: match.images[0] }} style={styles.similarImage} />
+                  )}
+                  <Text style={styles.similarName} numberOfLines={1}>{match.productName}</Text>
+                  <Text style={styles.similarScore}>{Math.round(match.similarity * 100)}% match</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
       )}
 
