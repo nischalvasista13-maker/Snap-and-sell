@@ -5,12 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import api from './utils/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-// Use EXPO_PUBLIC_API_URL for mobile device connectivity (must be HTTPS and publicly accessible)
-
-
-// Log the API URL on startup (for debugging)
-console.log('[TodaySales] Using API_URL:', API_URL);
-
 interface Sale {
   _id: string;
   items: Array<{
