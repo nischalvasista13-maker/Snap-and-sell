@@ -20,6 +20,7 @@ interface CheckoutData {
   cart: CartItem[];
   originalTotal: number;
   discount: number;
+  discountAmount: number;
   discountType: string | null;
   discountValue: number;
   finalTotal: number;
