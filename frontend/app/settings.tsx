@@ -215,6 +215,35 @@ export default function Settings() {
             <Text style={styles.signOutButtonText}>Sign Out</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Legal Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          
+          <TouchableOpacity 
+            style={styles.legalItem}
+            onPress={() => router.push('/privacy-policy' as any)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.legalItemContent}>
+              <Ionicons name="shield-checkmark-outline" size={20} color="#666" />
+              <Text style={styles.legalItemText}>Privacy Policy</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#CCC" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.legalItem}
+            onPress={() => router.push('/data-deletion' as any)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.legalItemContent}>
+              <Ionicons name="trash-outline" size={20} color="#666" />
+              <Text style={styles.legalItemText}>Data Deletion</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#CCC" />
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
