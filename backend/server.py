@@ -78,10 +78,23 @@ def object_id_to_str(doc):
 class UserCreate(BaseModel):
     username: str
     password: str
+    businessName: str  # Shop/business name for the new business
 
 class UserLogin(BaseModel):
     username: str
     password: str
+
+class SignupResponse(BaseModel):
+    message: str
+    userId: str
+    businessId: str
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+    userId: str
+    businessId: str
+    username: str
 
 class Token(BaseModel):
     access_token: str
