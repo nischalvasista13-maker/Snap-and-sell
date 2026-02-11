@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from './utils/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 interface SaleItem {
   productId: string;
@@ -52,8 +52,8 @@ export default function ReturnScreen() {
   const loadSaleAndReturns = async () => {
     try {
       const [saleRes, returnsRes] = await Promise.all([
-        axios.get(`${API_URL}/api/sales/${saleId}`),
-        axios.get(`${API_URL}/api/returns/by-sale/${saleId}`)
+        api.get(`/api/sales/${saleId}`),
+        api.get(`/api/returns/by-sale/${saleId}`)
       ]);
       
       const saleData = saleRes.data;
@@ -156,7 +156,7 @@ export default function ReturnScreen() {
         type: 'return'
       };
 
-      await axios.post(`${API_URL}/api/returns`, returnData);
+      await api.post(`/api/returns`, returnData);
       
       Alert.alert(
         'Return Successful',

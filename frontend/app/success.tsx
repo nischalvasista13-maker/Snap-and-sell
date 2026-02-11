@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from './utils/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 export default function Success() {
   const router = useRouter();
@@ -26,14 +26,14 @@ export default function Success() {
   const loadData = async () => {
     try {
       // Load shop name
-      const settingsRes = await axios.get(`${API_URL}/api/settings`);
+      const settingsRes = await api.get(`/api/settings`);
       if (settingsRes.data?.shopName) {
         setShopName(settingsRes.data.shopName);
       }
       
       // Load sale details if we have saleId
       if (saleId) {
-        const saleRes = await axios.get(`${API_URL}/api/sales/${saleId}`);
+        const saleRes = await api.get(`/api/sales/${saleId}`);
         if (saleRes.data?.items) {
           setSaleItems(saleRes.data.items);
         }

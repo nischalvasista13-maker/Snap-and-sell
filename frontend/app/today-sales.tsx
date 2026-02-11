@@ -6,7 +6,7 @@ import api from './utils/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Use EXPO_PUBLIC_API_URL for mobile device connectivity (must be HTTPS and publicly accessible)
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 // Log the API URL on startup (for debugging)
 console.log('[TodaySales] Using API_URL:', API_URL);
@@ -116,11 +116,11 @@ export default function TodaySales() {
       
       // Always use date-range endpoint with explicit dates (even for "Today")
       const [salesResponse, summaryResponse] = await Promise.all([
-        axios.get(`${API_URL}/api/sales/date-range`, {
+        api.get(`/api/sales/date-range`, {
           params: { start_date: start, end_date: end },
           timeout: 15000 // 15 second timeout
         }),
-        axios.get(`${API_URL}/api/sales/summary`, {
+        api.get(`/api/sales/summary`, {
           params: { start_date: start, end_date: end },
           timeout: 15000 // 15 second timeout
         })

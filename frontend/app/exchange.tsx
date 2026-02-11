@@ -4,7 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from './utils/api';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
 
 interface SaleItem {
   productId: string;
@@ -60,9 +60,9 @@ export default function ExchangeScreen() {
   const loadData = async () => {
     try {
       const [saleRes, returnsRes, productsRes] = await Promise.all([
-        axios.get(`${API_URL}/api/sales/${saleId}`),
-        axios.get(`${API_URL}/api/returns/by-sale/${saleId}`),
-        axios.get(`${API_URL}/api/products`)
+        api.get(`/api/sales/${saleId}`),
+        api.get(`/api/returns/by-sale/${saleId}`),
+        api.get(`/api/products`)
       ]);
       
       const saleData = saleRes.data;
@@ -204,7 +204,7 @@ export default function ExchangeScreen() {
         type: 'exchange'
       };
 
-      await axios.post(`${API_URL}/api/returns`, returnData);
+      await api.post(`/api/returns`, returnData);
 
       // Create the new sale
       const priceDiff = calculatePriceDifference();
@@ -220,7 +220,7 @@ export default function ExchangeScreen() {
         paymentMethod: priceDiff > 0 ? 'Cash' : 'Exchange'
       };
 
-      await axios.post(`${API_URL}/api/sales`, newSaleData);
+      await api.post(`/api/sales`, newSaleData);
 
       const priceDiffText = priceDiff > 0 
         ? `\n\nCollect ₹${priceDiff.toFixed(2)} from customer`
