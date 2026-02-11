@@ -16,6 +16,11 @@ from jose import JWTError, jwt
 import aiosmtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import base64
+from io import BytesIO
+from PIL import Image
+import imagehash
+import numpy as np
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
