@@ -56,6 +56,7 @@ export default function Payment() {
           cart: cartData,
           originalTotal: total,
           discount: 0,
+          discountAmount: 0,
           discountType: null,
           discountValue: 0,
           finalTotal: total,
