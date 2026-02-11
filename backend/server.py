@@ -235,6 +235,103 @@ class ReturnResponse(BaseModel):
     class Config:
         populate_by_name = True
 
+# Image Match Models
+class ImageMatchRequest(BaseModel):
+    imageData: str  # Base64 encoded image
+
+class ImageMatchResult(BaseModel):
+    productId: str
+    productName: str
+    similarity: float
+    images: List[str]
+
+class ImageMatchResponse(BaseModel):
+    matches: List[ImageMatchResult]
+    hasMatch: bool
+    message: str
+
+# ===== IMAGE MATCHING HELPER FUNCTIONS =====
+
+def compute_image_hash(image_data: str) -> Optional[str]:
+    """Compute perceptual hash from base64 image data"""
+    try:
+        # Handle data URL format
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        # Decode base64
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(BytesIO(image_bytes))
+        
+        # Convert to RGB if necessary
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Compute perceptual hash
+        phash = imagehash.phash(image)
+        return str(phash)
+    except Exception as e:
+        logging.error(f"Error computing image hash: {e}")
+        return None
+
+def compute_color_histogram(image_data: str) -> Optional[List[float]]:
+    """Compute color histogram from base64 image data"""
+    try:
+        # Handle data URL format
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        # Decode base64
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(BytesIO(image_bytes))
+        
+        # Convert to RGB and resize for consistency
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        image = image.resize((64, 64))
+        
+        # Compute color histogram (8 bins per channel)
+        img_array = np.array(image)
+        hist_r = np.histogram(img_array[:,:,0], bins=8, range=(0, 256))[0]
+        hist_g = np.histogram(img_array[:,:,1], bins=8, range=(0, 256))[0]
+        hist_b = np.histogram(img_array[:,:,2], bins=8, range=(0, 256))[0]
+        
+        # Normalize and combine
+        histogram = np.concatenate([hist_r, hist_g, hist_b]).astype(float)
+        histogram = histogram / histogram.sum()  # Normalize
+        
+        return histogram.tolist()
+    except Exception as e:
+        logging.error(f"Error computing color histogram: {e}")
+        return None
+
+def compare_hashes(hash1: str, hash2: str) -> float:
+    """Compare two perceptual hashes, return similarity (0-1)"""
+    try:
+        h1 = imagehash.hex_to_hash(hash1)
+        h2 = imagehash.hex_to_hash(hash2)
+        # Hamming distance, convert to similarity
+        distance = h1 - h2
+        max_distance = 64  # Max hamming distance for 64-bit hash
+        similarity = 1 - (distance / max_distance)
+        return max(0, similarity)
+    except Exception:
+        return 0
+
+def compare_histograms(hist1: List[float], hist2: List[float]) -> float:
+    """Compare two color histograms using cosine similarity"""
+    try:
+        h1 = np.array(hist1)
+        h2 = np.array(hist2)
+        dot_product = np.dot(h1, h2)
+        norm1 = np.linalg.norm(h1)
+        norm2 = np.linalg.norm(h2)
+        if norm1 == 0 or norm2 == 0:
+            return 0
+        return dot_product / (norm1 * norm2)
+    except Exception:
+        return 0
+
 # ===== AUTH HELPER FUNCTIONS =====
 
 def hash_password(password: str) -> str:
